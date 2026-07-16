@@ -397,7 +397,10 @@ function render(){
   const head=`
     <div class="topbar">
       <div class="brand" onclick="goHome()">Final Cut</div>
-      <div class="scorepill">score <b>${S.score}</b></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div class="scorepill">score <b>${S.score}</b></div>
+        <button class="btn btn-ghost btn-sm" onclick="goHome()" title="Exit game">← back</button>
+      </div>
     </div>
     <div class="progress"><i style="width:${Math.round(100*doneQs()/totalQs(g))}%"></i></div>`;
   if(S.phase==="roundIntro")return renderRoundIntro(head);
