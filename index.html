@@ -1169,6 +1169,7 @@ async function tmdbDetail(id){
     if(m.status_code)throw 0;
     const dir=((m.credits||{}).crew||[]).find(c=>c.job==="Director");
     const cast=((m.credits||{}).cast||[]).slice(0,6).map(c=>c.name);
+    window.__tmdbLast={url:m.poster_path?("https://image.tmdb.org/t/p/w500"+m.poster_path):null,title:m.title||""};
     res.innerHTML=`
       <div class="tmdb-detail">
         ${m.poster_path?`<img src="https://image.tmdb.org/t/p/w154${m.poster_path}" alt="">`:""}
@@ -1187,24 +1188,44 @@ async function tmdbDetail(id){
       <div class="formactions">
         <button class="btn btn-ghost btn-sm" onclick="tmdbSearch()">← results</button>
         <button class="btn btn-ghost btn-sm" onclick="tmdbCopy()">copy facts</button>
-        ${m.poster_path?`<button class="btn btn-gold btn-sm" onclick="tmdbUsePoster('https://image.tmdb.org/t/p/w500${m.poster_path}')">🖼 Use this poster</button>`:""}
+        ${m.poster_path?`<button class="btn btn-gold btn-sm" onclick="tmdbUseLast()">🖼 Use poster + title</button>`:""}
       </div>
       <textarea id="tmdbfacts" style="position:absolute;left:-9999px">${esc(m.title)} (${(m.release_date||"").slice(0,4)})\ndirector: ${esc(dir?dir.name:"")}\nrating: ${m.vote_average?m.vote_average.toFixed(1):""}\ngenres: ${(m.genres||[]).map(g=>g.name).join(", ")}\ncast: ${cast.join(", ")}\nbox office: ${m.revenue||""}</textarea>`;
   }catch(e){res.innerHTML='<p class="muted">Error loading details.</p>';}
 }
-function tmdbUsePoster(url){
-  const targets=["f_img","f_ai","f_bi"];
-  for(const id of targets){
-    const e=document.getElementById(id);
+function tmdbUseLast(){
+  const d=window.__tmdbLast;
+  if(!d||!d.url)return toast("No poster available for this movie");
+  tmdbUsePoster(d.url,d.title);
+}
+function tmdbUsePoster(url,title){
+  const mark=e=>{e.style.borderColor="var(--good)";};
+  // [image field, accepted-answers field, display-answer field] per question type
+  const map=[["f_img","f_answers","f_display"],["f_ai","f_aa","f_ad"],["f_bi","f_ba","f_bd"]];
+  for(const ids of map){
+    const e=document.getElementById(ids[0]);
     if(e&&!e.value.trim()){
-      e.value=url;
-      e.style.borderColor="var(--good)";
-      toast("🖼 Poster dropped into the question");
+      e.value=url;mark(e);
+      if(title){
+        const a=document.getElementById(ids[1]);
+        if(a&&!a.value.trim()){a.value=title;mark(a);}
+        const di=document.getElementById(ids[2]);
+        if(di&&!di.value.trim()){di.value=title;mark(di);}
+      }
+      toast("🖼 Poster + title dropped in");
       return;
     }
   }
+  // no open image field — also offer title to plain answer fields (quote/riddle/etc.)
+  const a=document.getElementById("f_answers"),di=document.getElementById("f_display");
+  if(title&&((a&&!a.value.trim())||(di&&!di.value.trim()))){
+    if(a&&!a.value.trim()){a.value=title;mark(a);}
+    if(di&&!di.value.trim()){di.value=title;mark(di);}
+    toast("Title dropped into the answer fields");
+    return;
+  }
   (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject())
-    .then(()=>toast("Poster URL copied — open a Poster pieces or Twin films question and paste it into the image field"))
+    .then(()=>toast("Poster URL copied — open a question with an image field and paste it"))
     .catch(()=>{prompt("Copy this poster URL:",url);});
 }
 function tmdbCopy(){
