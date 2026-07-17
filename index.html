@@ -183,6 +183,22 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .fab{position:fixed;bottom:22px;right:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-size:25px;box-shadow:0 10px 28px var(--glow);z-index:90;display:flex;align-items:center;justify-content:center;border:none}
 .fab:hover{transform:scale(1.06)}
 
+.palette{display:grid;grid-auto-flow:column;grid-auto-columns:172px;gap:10px;overflow-x:auto;padding:4px 2px 14px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
+.pcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;cursor:grab;scroll-snap-align:start;box-shadow:0 4px 14px rgba(30,15,15,.05);transition:.15s transform,.15s border-color,.15s box-shadow;user-select:none}
+.pcard:hover{border-color:var(--red2);transform:translateY(-3px);box-shadow:0 10px 24px rgba(214,34,28,.13)}
+.pcard:active{cursor:grabbing}
+.pcard .pico{font-size:22px;width:42px;height:42px;border-radius:11px;background:rgba(214,34,28,.08);display:flex;align-items:center;justify-content:center;margin-bottom:9px}
+.pcard b{font-size:13.5px;display:block;margin-bottom:3px}
+.pcard p{font-size:11.5px;color:var(--muted);line-height:1.45}
+.dropslot{border:2px dashed #d5d1dc;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:132px;color:var(--muted);font-weight:600;font-size:14px;transition:.15s;background:none}
+.dropslot.dragover{border-color:var(--red);box-shadow:0 0 0 3px var(--glow)}
+.dropslot span{font-size:20px;color:var(--red2)}
+.rtile .ticon{font-size:17px;margin-left:6px}
+.typechips{display:flex;flex-wrap:wrap;gap:8px}
+.typechip{background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--steel)}
+.typechip:hover{border-color:var(--red2)}
+.typechip.sel{border-color:var(--red);background:rgba(214,34,28,.07);color:var(--red)}
+
 /* live rooms */
 .buzzbtn{width:min(230px,64vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--red2),var(--red) 70%);color:#fff;font-family:'Anton',Impact,sans-serif;font-size:36px;letter-spacing:.06em;box-shadow:0 14px 40px var(--glow),inset 0 -8px 22px rgba(0,0,0,.25);border:6px solid #fff}
 .buzzbtn:active{transform:scale(.93)}
@@ -871,14 +887,14 @@ function shareScore(maxAll){
    CREATOR
    ===================================================== */
 const TYPE_META={
-  listReveal:{label:"Progressive reveal", hint:"Clues appear one by one (actor filmography, movie facts...)"},
-  quote:{label:"Quote", hint:"Iconic line + what you're asking for"},
-  ordering:{label:"Put in order", hint:"4 movies ordered by a stat"},
-  riddle:{label:"Reworded title", hint:"A title said very unhelpfully"},
-  anagram:{label:"Title scramble", hint:"Anagram of a movie title"},
-  math:{label:"Movie math", hint:"Three number-titles that do math"},
-  twins:{label:"Twin films", hint:"Two same-idea movies, same year"},
-  pieces:{label:"Poster pieces", hint:"Poster revealed tile by tile"}
+  listReveal:{label:"Progressive reveal", icon:"🎞️", hint:"Clues appear one by one (actor filmography, movie facts...)"},
+  quote:{label:"Quote", icon:"💬", hint:"Iconic line + what you're asking for"},
+  ordering:{label:"Put in order", icon:"🔢", hint:"4 movies ordered by a stat"},
+  riddle:{label:"Reworded title", icon:"🙃", hint:"A title said very unhelpfully"},
+  anagram:{label:"Title scramble", icon:"🔀", hint:"Anagram of a movie title"},
+  math:{label:"Movie math", icon:"➗", hint:"Three number-titles that do math"},
+  twins:{label:"Twin films", icon:"👯", hint:"Two same-idea movies, same year"},
+  pieces:{label:"Poster pieces", icon:"🧩", hint:"Poster revealed tile by tile"}
 };
 const DB={
   load(){try{return JSON.parse(localStorage.getItem("fc_games")||"[]")}catch(e){return[]}},
@@ -944,14 +960,22 @@ function adminNewFromS1E1(){C=JSON.parse(JSON.stringify(GAME_S1E1));C.title="my 
 /* ---- game editor: round tiles with drag reorder ---- */
 function renderCreator(){
   window.scrollTo(0,0);persistC();
+  const palette=Object.keys(TYPE_META).map(t=>`
+    <div class="pcard" draggable="true"
+      ondragstart="dragType='${t}'" ondragend="dragType=null"
+      onclick="paletteAdd('${t}')" title="drag into your lineup — or tap to add">
+      <div class="pico">${TYPE_META[t].icon}</div>
+      <b>${TYPE_META[t].label}</b>
+      <p>${TYPE_META[t].hint}</p>
+    </div>`).join("");
   const tiles=C.rounds.map((r,ri)=>`
     <div class="rtile" draggable="true" onclick="renderRoundEditor(${ri})"
       ondragstart="dragRi=${ri}" ondragend="dragRi=null"
       ondragover="event.preventDefault();this.classList.add('dragover')"
       ondragleave="this.classList.remove('dragover')"
-      ondrop="event.preventDefault();this.classList.remove('dragover');dropRound(${ri})">
+      ondrop="event.preventDefault();this.classList.remove('dragover');tileDrop(${ri})">
       <span class="drag" title="drag to reorder">⠿</span>
-      <span class="tag">R${ri+1}</span>
+      <span class="tag">R${ri+1}</span> <span class="ticon">${TYPE_META[r.type].icon}</span>
       <h3>${esc(r.name||"untitled round")}</h3>
       <div class="tilemeta">${TYPE_META[r.type].label} · ${r.questions.length} question${r.questions.length===1?"":"s"}</div>
       <div class="tileactions" onclick="event.stopPropagation()">
@@ -971,22 +995,50 @@ function renderCreator(){
     <h2 class="display" style="font-size:24px">${esc(C.title||"untitled")}</h2>
     <span class="tag">auto-saved ✓</span>
   </div>
-  <div class="card" style="margin-bottom:14px">
+  <div class="card" style="margin-bottom:16px">
     <div class="field"><label>Game title</label><input type="text" value="${esc(C.title)}" onchange="C.title=this.value;persistC();renderCreator()"></div>
     <div class="field" style="margin-bottom:0"><label>Host / author</label><input type="text" value="${esc(C.author)}" onchange="C.author=this.value;persistC()" placeholder="you"></div>
   </div>
-  <p class="muted" style="font-size:13px;margin:0 2px 10px">Rounds play top-to-bottom — <b>drag tiles to reorder</b>, ⧉ to duplicate.</p>
+  <h3 style="margin:2px 2px 6px">Round types</h3>
+  <p class="muted" style="font-size:13px;margin:0 2px 10px">Drag one into your lineup — or tap to add. Drop a type onto an existing round to transform it.</p>
+  <div class="palette">${palette}</div>
+  <h3 style="margin:18px 2px 6px">Your lineup ${C.rounds.length?`<span class="muted" style="font-size:13px;font-weight:400">· ${C.rounds.length} round${C.rounds.length===1?"":"s"}</span>`:""}</h3>
+  <p class="muted" style="font-size:13px;margin:0 2px 10px">Plays top to bottom — drag tiles to reorder.</p>
   <div class="grid2">
     ${tiles}
-    <button class="addtile" onclick="addRound()">+ add round</button>
+    <div class="dropslot"
+      ondragover="event.preventDefault();this.classList.add('dragover')"
+      ondragleave="this.classList.remove('dragover')"
+      ondrop="event.preventDefault();this.classList.remove('dragover');slotDrop()">
+      <span>＋</span> drop a round type here
+    </div>
   </div>
   <div class="card" style="margin-top:16px">
     <div class="formactions" style="margin-top:0">
       <button class="btn btn-gold btn-sm" onclick="testPlay()">▶ Playtest</button>
       <button class="btn btn-ghost btn-sm" onclick="adminCode(C._id)">🔗 Copy share code</button>
-      <button class="btn btn-ghost btn-sm" onclick="tmdbPanel()">🎬 Movie research</button>
+      <button class="btn btn-ghost btn-sm" onclick="liveHostFromId(C._id)">📡 Host live</button>
     </div>
   </div><button class="fab" onclick="tmdbPanel()" title="Movie research (TMDB)">🎬</button>`;
+}
+let dragType=null;
+function paletteAdd(t){
+  C.rounds.push({name:TYPE_META[t].label.toLowerCase(),type:t,rule:"",questions:[]});
+  persistC();renderCreator();toast(TYPE_META[t].icon+" "+TYPE_META[t].label+" added");
+}
+function slotDrop(){
+  if(dragType){const t=dragType;dragType=null;paletteAdd(t);return;}
+  if(dragRi!==null&&dragRi!==undefined){const r=C.rounds.splice(dragRi,1)[0];C.rounds.push(r);dragRi=null;persistC();renderCreator();}
+}
+function tileDrop(target){
+  if(dragType){
+    const t=dragType;dragType=null;
+    const r=C.rounds[target];
+    if(r.type===t){renderCreator();return;}
+    if(r.questions.length&&!confirm("Turn this round into "+TYPE_META[t].label+"? Its questions will be cleared.")){renderCreator();return;}
+    r.type=t;r.questions=[];persistC();renderCreator();return;
+  }
+  dropRound(target);
 }
 function dropRound(target){
   if(dragRi===null||dragRi===target)return;
@@ -1016,11 +1068,11 @@ function renderRoundEditor(ri){
   </div>
   <div class="card" style="margin-bottom:14px">
     <div class="field"><label>Round name</label><input type="text" value="${esc(r.name)}" onchange="C.rounds[${ri}].name=this.value;persistC()"></div>
-    <div class="field"><label>Round type</label>
-      <select onchange="changeType(${ri},this.value)">
-        ${Object.keys(TYPE_META).map(t=>`<option value="${t}" ${r.type===t?"selected":""}>${TYPE_META[t].label}</option>`).join("")}
-      </select>
-      <p class="muted" style="font-size:12.5px;margin-top:6px">${TYPE_META[r.type].hint}</p>
+    <div class="field"><label>Round type — tap to change</label>
+      <div class="typechips">
+        ${Object.keys(TYPE_META).map(t=>`<button class="typechip ${r.type===t?"sel":""}" onclick="changeType(${ri},'${t}')">${TYPE_META[t].icon} ${TYPE_META[t].label}</button>`).join("")}
+      </div>
+      <p class="muted" style="font-size:12.5px;margin-top:8px">${TYPE_META[r.type].hint}</p>
     </div>
     <div class="field" style="margin-bottom:0"><label>Round rules — shown to players before the round starts</label>
       <textarea rows="2" onchange="C.rounds[${ri}].rule=this.value;persistC()">${esc(r.rule||"")}</textarea></div>
@@ -1053,7 +1105,8 @@ function addRound(){
 function delRound(i){if(confirm("Delete this round?")){C.rounds.splice(i,1);persistC();renderCreator();}}
 function changeType(ri,t){
   const r=C.rounds[ri];
-  if(r.questions.length&&!confirm("Changing type clears this round's questions. Continue?")){renderRoundEditor(ri);return;}
+  if(r.type===t)return;
+  if(r.questions.length&&!confirm("Turn this round into "+TYPE_META[t].label+"? Its questions will be cleared.")){renderRoundEditor(ri);return;}
   r.type=t;r.questions=[];persistC();renderRoundEditor(ri);
 }
 function testPlay(){
