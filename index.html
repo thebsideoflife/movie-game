@@ -216,11 +216,12 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 
 .hostans{background:#fffdf2;border:1.5px dashed #dfc46a;border-radius:12px;padding:12px 16px;margin-top:14px;font-size:14.5px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
 
-#videostrip{position:fixed;top:12px;right:12px;display:flex;flex-wrap:wrap;gap:8px;z-index:95;max-width:46vw;justify-content:flex-end}
-.vtile{width:124px;aspect-ratio:4/3;border-radius:10px;overflow:hidden;background:#000;position:relative;box-shadow:0 8px 22px rgba(0,0,0,.3);border:2px solid #fff}
+#videostrip{position:fixed;top:12px;right:12px;display:flex;flex-wrap:wrap;gap:10px;z-index:95;max-width:560px;justify-content:flex-end}
+.vtile{width:min(260px,24vw);aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#000;position:relative;box-shadow:0 10px 30px rgba(0,0,0,.35);border:3px solid #fff}
 .vtile video{width:100%;height:100%;object-fit:cover;display:block}
-.vtile span{position:absolute;bottom:3px;left:7px;color:#fff;font-size:10.5px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8)}
-@media(max-width:700px){#videostrip{max-width:100vw;left:0;right:0;top:0;padding:6px;justify-content:center;background:rgba(255,255,255,.6);backdrop-filter:blur(6px)}.vtile{width:86px}}
+.vtile span{position:absolute;bottom:6px;left:10px;color:#fff;font-size:13px;font-weight:800;text-shadow:0 1px 4px rgba(0,0,0,.9)}
+.audiobtn{background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:800;border-radius:999px;padding:12px 18px;font-size:14px;box-shadow:0 8px 24px var(--glow);align-self:center}
+@media(max-width:700px){#videostrip{max-width:100vw;left:0;right:0;top:0;padding:8px;justify-content:center;background:rgba(255,255,255,.65);backdrop-filter:blur(6px)}.vtile{width:44vw}}
 
 /* TMDB panel */
 .tmdb{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(30,15,15,.12);z-index:98;padding:20px;overflow-y:auto}
@@ -1364,13 +1365,13 @@ let L=null;
 function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
 function liveLeave(){try{stopLiveTimers();destroyVideo();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
 /* ---- live video (mesh, host audio only) ---- */
-let V={stream:null,calls:{},els:{}};
+let V={stream:null,calls:{},els:{},audioTiles:{},audioEnabled:false};
 function ensureStrip(){
   let s=document.getElementById("videostrip");
   if(!s){s=document.createElement("div");s.id="videostrip";document.body.appendChild(s);}
   return s;
 }
-function addVideo(id,stream,label,muted){
+function addVideo(id,stream,label,muted,wantsAudio){
   const s=ensureStrip();
   let t=V.els[id];
   if(!t){
@@ -1379,10 +1380,15 @@ function addVideo(id,stream,label,muted){
     s.appendChild(t);V.els[id]=t;
   }
   const vid=t.querySelector("video");
-  vid.muted=!!muted;
+  vid.muted=true; // always start muted so video autoplays everywhere
   vid.srcObject=stream;
   if(vid.play){const p=vid.play();if(p&&p.catch)p.catch(()=>{});}
   t.querySelector("span").textContent=label||"";
+  if(wantsAudio){
+    V.audioTiles[id]=true;
+    if(V.audioEnabled){vid.muted=false;if(vid.play){const p2=vid.play();if(p2&&p2.catch)p2.catch(()=>{});}}
+    else ensureAudioButton();
+  }
 }
 function removeVideo(id){
   const t=V.els[id];if(t){t.remove();delete V.els[id];}
@@ -1392,31 +1398,59 @@ function destroyVideo(){
   Object.keys(V.calls).forEach(id=>{try{V.calls[id].close()}catch(e){}});
   if(V.stream){try{V.stream.getTracks().forEach(t=>t.stop())}catch(e){}}
   const s=document.getElementById("videostrip");if(s)s.remove();
-  V={stream:null,calls:{},els:{}};
+  V={stream:null,calls:{},els:{},audioTiles:{},audioEnabled:false};
+}
+function ensureAudioButton(){
+  if(V.audioEnabled||!Object.keys(V.audioTiles).length)return;
+  const s=ensureStrip();
+  if(document.getElementById("audiobtn"))return;
+  const b=document.createElement("button");
+  b.id="audiobtn";b.className="audiobtn";
+  b.textContent="🔊 tap for host audio";
+  b.onclick=enableHostAudio;
+  s.appendChild(b);
+}
+function enableHostAudio(){
+  V.audioEnabled=true;
+  Object.keys(V.audioTiles).forEach(id=>{
+    const t=V.els[id];if(!t)return;
+    const vd=t.querySelector("video");if(!vd)return;
+    vd.muted=false;
+    if(vd.play){const p=vd.play();if(p&&p.catch)p.catch(()=>{});}
+  });
+  const b=document.getElementById("audiobtn");if(b)b.remove();
+  toast("🔊 host audio on");
 }
 function liveNameFor(id){
   if(L&&L.role==="host")return ((L.players[id]||{}).name)||"host";
   const vp=(L&&L.view&&L.view.vparts)||[];
   const f=vp.find(p=>p.id===id);return f?f.name:"";
 }
+function isHostPeer(id){return L&&L.role==="player"&&id===("finalcut-"+L.code.toLowerCase());}
 function handleIncomingCall(call){
   try{call.answer(V.stream||undefined);}catch(e){}
   V.calls[call.peer]=call;
-  call.on("stream",rs=>addVideo(call.peer,rs,liveNameFor(call.peer),false));
+  call.on("stream",rs=>addVideo(call.peer,rs,isHostPeer(call.peer)?"host":liveNameFor(call.peer),true,isHostPeer(call.peer)));
   call.on("close",()=>removeVideo(call.peer));
 }
 function callParticipants(){
   if(!V.stream||!L||!L.peer)return;
   const vp=L.role==="host"?(L.videoParts||[]):((L.view&&L.view.vparts)||[]);
   const myId=L.role==="host"?(L.peer.id||""):L.myId;
+  const idxMe=vp.findIndex(x=>x.id===myId);
   for(const p of vp){
-    if(p.id===myId)break; // only call people who enabled before me
+    if(p.id===myId)continue;
+    if(L.role==="player"&&isHostPeer(p.id))continue; // host calls players, not the reverse — keeps mic audio in the offer
+    if(L.role==="player"){
+      const idxP=vp.findIndex(x=>x.id===p.id);
+      if(idxMe!==-1&&idxP>idxMe)continue; // among players: only call those who enabled before me
+    }
     if(V.calls[p.id])continue;
     try{
       const call=L.peer.call(p.id,V.stream);
       if(!call)continue;
       V.calls[p.id]=call;
-      call.on("stream",rs=>addVideo(p.id,rs,p.name,false));
+      call.on("stream",rs=>addVideo(p.id,rs,p.name,true,false));
       call.on("close",()=>removeVideo(p.id));
     }catch(e){}
   }
@@ -1526,6 +1560,7 @@ function hostMsg(conn,d){
     if(!L.videoOn||!L.players[conn.peer])return;
     if((L.videoParts||[]).length>=5)return; // host + 4 max
     if(!L.videoParts.find(p=>p.id===conn.peer))L.videoParts.push({id:conn.peer,name:(L.players[conn.peer]||{}).name||"player"});
+    if(V.stream)callParticipants();
     bcastView();renderLiveHost();
   }
   if(d.t==="answer"){
