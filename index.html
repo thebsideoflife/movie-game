@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Final Cut — movie trivia</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Fraunces:ital,wght@0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
@@ -181,6 +182,17 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 
 .fab{position:fixed;bottom:22px;right:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-size:25px;box-shadow:0 10px 28px var(--glow);z-index:90;display:flex;align-items:center;justify-content:center;border:none}
 .fab:hover{transform:scale(1.06)}
+
+/* live rooms */
+.buzzbtn{width:min(230px,64vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--red2),var(--red) 70%);color:#fff;font-family:'Anton',Impact,sans-serif;font-size:36px;letter-spacing:.06em;box-shadow:0 14px 40px var(--glow),inset 0 -8px 22px rgba(0,0,0,.25);border:6px solid #fff}
+.buzzbtn:active{transform:scale(.93)}
+.buzzmsg{font-weight:800;font-size:20px;padding:26px;border-radius:16px;background:#fff;border:1px solid var(--line);display:inline-block}
+.buzzmsg.you{color:var(--good);border-color:var(--good)}
+.buzzmsg.out{color:var(--muted)}
+.livescores{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+.scorechip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-size:14px}
+.scorechip b{color:var(--red)}
+.scorechip.buzzing{border-color:var(--red);box-shadow:0 0 0 3px var(--glow)}
 
 /* TMDB panel */
 .tmdb{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(30,15,15,.12);z-index:98;padding:20px;overflow-y:auto}
@@ -472,6 +484,10 @@ function renderHome(){
     <button class="menucard" onclick="promptImport()">
       <div class="ico">📩</div>
       <div><h3>Play a sent game</h3><p>Got a game code from a friend? Paste it here.</p></div>
+    </button>
+    <button class="menucard" onclick="renderLiveEntry()">
+      <div class="ico">📡</div>
+      <div><h3>Live room (beta)</h3><p>Host on a shared screen — friends join with a code on their phones and buzz in. First buzz locks the rest out.</p></div>
     </button>
     <div class="menucard" style="opacity:.55">
       <div class="ico">🏆</div>
@@ -1229,6 +1245,293 @@ function saveQ(ri,qi){
   if(t==="twins"&&(!q.a.answers.length||!q.b.answers.length))return toast("Both movies need answers");
   if(qi>=0)r.questions[qi]=q;else r.questions.push(q);
   persistC();renderRoundEditor(ri);
+}
+
+/* =====================================================
+   LIVE ROOMS (beta) — PeerJS host/player
+   ===================================================== */
+let L=null;
+function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
+function liveLeave(){try{stopLiveTimers();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
+function renderLiveEntry(){
+  window.scrollTo(0,0);liveLeave();
+  const games=DB.load();
+  app().innerHTML=`
+  <div class="topbar"><div class="brand" onclick="S=null;render()">Final Cut</div>
+    <button class="btn btn-ghost btn-sm" onclick="S=null;render()">← Home</button></div>
+  <div class="crhead"><h2 class="display" style="font-size:26px">Live room</h2><span class="tag">beta</span></div>
+  <div class="card" style="margin-bottom:14px">
+    <h3 style="margin-bottom:10px">Join a game</h3>
+    <div class="field"><label>Room code</label><input type="text" id="jcode" placeholder="e.g. KXWZ" maxlength="4" style="text-transform:uppercase" autocomplete="off"></div>
+    <div class="field"><label>Your name</label><input type="text" id="jname" placeholder="name" maxlength="20" autocomplete="off"></div>
+    <button class="btn btn-gold" onclick="liveJoinClick()">Join room</button>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:10px">Host a game</h3>
+    <p class="muted" style="font-size:13px;margin-bottom:12px">Your screen becomes the game board — put it on a TV or share it on a call. Players join on their phones, buzz in, and answer out loud. You judge with one tap.</p>
+    <div class="formactions" style="margin-top:0">
+      <button class="btn btn-gold btn-sm" onclick="liveHostStart(GAME_S1E1)">Host S1E1</button>
+      ${games.map(g=>`<button class="btn btn-ghost btn-sm" onclick="liveHostFromId('${g._id}')">Host: ${esc(g.title||"untitled")}</button>`).join("")}
+    </div>
+  </div>`;
+}
+function liveJoinClick(){
+  const c=(gv("jcode")||"").toUpperCase(),n=gv("jname");
+  if(c.length!==4)return toast("Room codes are 4 letters");
+  if(!n)return toast("Enter a name");
+  liveJoin(c,n);
+}
+function liveHostFromId(id){const g=adminFind(id);if(g)liveHostStart(g);}
+
+/* ---- host ---- */
+function liveHostStart(gameObj,attempt){
+  attempt=attempt||0;
+  if(typeof Peer==="undefined")return toast("Live rooms need internet — PeerJS didn't load");
+  const game=JSON.parse(JSON.stringify(gameObj));
+  delete game._id;delete game._updated;
+  game.rounds=game.rounds.filter(r=>r.questions.length);
+  if(!game.rounds.length)return toast("That game has no questions yet");
+  liveLeave();
+  const code=liveCode();
+  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[]};
+  const peer=new Peer("finalcut-"+code.toLowerCase());
+  L.peer=peer;
+  peer.on("open",()=>{if(L)renderLiveHost();});
+  peer.on("error",e=>{
+    if(e&&e.type==="unavailable-id"&&attempt<3)return liveHostStart(gameObj,attempt+1);
+    toast("Connection error: "+((e&&e.type)||e));
+  });
+  peer.on("connection",conn=>{
+    conn.on("data",d=>hostMsg(conn,d));
+    conn.on("close",()=>{
+      if(!L)return;
+      delete L.conns[conn.peer];
+      if(L.players[conn.peer]){delete L.players[conn.peer];bcastView();renderLiveHost();}
+    });
+  });
+  renderLiveHost();
+}
+function hostMsg(conn,d){
+  if(!L||L.role!=="host"||!d)return;
+  if(d.t==="hello"){
+    L.conns[conn.peer]=conn;
+    L.players[conn.peer]={name:String(d.name||"player").slice(0,20),score:0};
+    try{conn.send({t:"welcome",game:L.game});}catch(e){}
+    bcastView();renderLiveHost();
+  }
+  if(d.t==="buzz"){
+    if(L.screen!=="question"||L.lockedBy||L.buzzedOut.includes(conn.peer)||!L.players[conn.peer])return;
+    L.lockedBy=conn.peer;stopLiveTimers();bcastView();renderLiveHost();
+  }
+}
+function viewPayload(){
+  return {t:"view",v:{screen:L.screen,ri:L.ri,qi:L.qi,cluesShown:L.cluesShown,tiles:L.tiles,
+    tileOrder:L.tileOrder,shuffled:L.shufOrder,
+    lockedBy:L.lockedBy?((L.players[L.lockedBy]||{}).name||"?"):null,lockedId:L.lockedBy,
+    buzzedOut:L.buzzedOut.slice(),pot:livePot(),
+    scores:Object.fromEntries(Object.values(L.players).map(p=>[p.name,p.score])),
+    reveal:L.revealData}};
+}
+function bcastView(){if(!L)return;const m=viewPayload();Object.values(L.conns).forEach(c=>{try{c.send(m)}catch(e){}});}
+function livePot(){
+  const r=L.game.rounds[L.ri];
+  if(r.type==="listReveal")return Math.max(4,11-L.cluesShown);
+  if(r.type==="pieces")return Math.max(3,15-Math.floor((L.tiles-4)/2));
+  if(r.type==="math")return 15;
+  return 10;
+}
+function liveStart(){L.screen="roundIntro";bcastView();renderLiveHost();}
+function liveBeginQ(){
+  const r=L.game.rounds[L.ri],q=r.questions[L.qi];
+  L.screen="question";L.cluesShown=1;L.tiles=4;L.lockedBy=null;L.buzzedOut=[];L.revealData=null;
+  L.tileOrder=piecesOrder();
+  L.shufOrder=q.items?shuffled(q.items.map((x,i)=>i)):[];
+  startLiveTimers();bcastView();renderLiveHost();
+}
+function startLiveTimers(){
+  stopLiveTimers();
+  const r=L.game.rounds[L.ri],q=r.questions[L.qi];
+  if(r.type==="listReveal")L.interval=setInterval(()=>{
+    if(L.cluesShown<q.clues.length){L.cluesShown++;bcastView();renderLiveHost();}else stopLiveTimers();
+  },6000);
+  if(r.type==="pieces")L.interval=setInterval(()=>{
+    if(L.tiles<24){L.tiles++;bcastView();renderLiveHost();}else stopLiveTimers();
+  },2500);
+}
+function stopLiveTimers(){if(L&&L.interval){clearInterval(L.interval);L.interval=null;}}
+function liveJudge(ok){
+  if(!L.lockedBy)return;
+  if(ok){L.players[L.lockedBy].score+=livePot();liveReveal();}
+  else{L.buzzedOut.push(L.lockedBy);L.lockedBy=null;startLiveTimers();bcastView();renderLiveHost();}
+}
+function liveRevealData(){
+  const r=L.game.rounds[L.ri],q=r.questions[L.qi];
+  if(r.type==="ordering")return {kind:"list",items:q.items.map((it,i)=>(i+1)+". "+it.label+(it.note?" — "+it.note:"")),fact:q.fact};
+  if(r.type==="math")return {kind:"text",text:q.parts[0].display+" "+(q.op||"+")+" "+q.parts[1].display+" = "+q.parts[2].display,fact:q.fact};
+  if(r.type==="twins")return {kind:"twins",a:q.a.display,b:q.b.display,ai:q.a.img,bi:q.b.img,fact:q.fact};
+  if(r.type==="pieces")return {kind:"pieces",img:q.img,display:q.display,fact:q.fact};
+  return {kind:"text",text:q.display||(q.answers&&q.answers[0])||"",fact:q.fact};
+}
+function liveReveal(){L.revealData=liveRevealData();L.screen="reveal";L.lockedBy=null;stopLiveTimers();bcastView();renderLiveHost();}
+function liveNext(){
+  const r=L.game.rounds[L.ri];
+  if(L.qi<r.questions.length-1){L.qi++;liveBeginQ();}
+  else if(L.ri<L.game.rounds.length-1){L.screen="scores";bcastView();renderLiveHost();}
+  else{L.screen="final";bcastView();renderLiveHost();}
+}
+function liveNextRound(){L.ri++;L.qi=0;L.screen="roundIntro";bcastView();renderLiveHost();}
+
+function liveScoresChips(v,buzzingName){
+  const e=Object.entries(v.scores||{});
+  return e.length?`<div class="livescores">${e.map(([n,s])=>`<span class="scorechip ${buzzingName===n?"buzzing":""}">${esc(n)} <b>${s}</b></span>`).join("")}</div>`:"";
+}
+function liveQHTML(r,q,v){
+  if(r.type==="listReveal")return `<div class="clues">${q.clues.map((c,i)=>i<v.cluesShown?`<div class="clue">${esc(c)}</div>`:`<div class="clue hidden-clue">next clue soon…</div>`).join("")}</div>`;
+  if(r.type==="quote")return `<div class="quotecard"><div class="q">${esc(q.quote)}</div></div><div class="prompt" style="font-size:20px;margin-top:14px">${esc(q.ask||"Name the movie")}</div>`;
+  if(r.type==="ordering")return `<div class="prompt" style="font-size:21px">${esc(q.prompt)}</div><div class="pool">${(v.shuffled&&v.shuffled.length?v.shuffled:q.items.map((x,i)=>i)).map(i=>`<span class="chip">${esc(q.items[i].label)}</span>`).join("")}</div><p class="muted" style="margin-top:12px;font-size:13px">buzz in, then say the full order out loud</p>`;
+  if(r.type==="riddle")return `<div class="prompt">"${esc(q.prompt)}"</div>`;
+  if(r.type==="anagram")return `<div class="scramble">${esc(q.scramble)}</div>`;
+  if(r.type==="math")return q.parts.map((p,i)=>`${i>0?`<div class="mathop">${i===1?esc(q.op||"+"):"="}</div>`:""}<div class="mathrow"><div class="clue-t">${esc(p.clue)}</div></div>`).join("")+`<p class="muted" style="margin-top:10px;font-size:13px">name all three movies</p>`;
+  if(r.type==="twins")return `<div class="prompt">${esc(q.prompt)}</div><p class="muted" style="font-size:14px">two movies, same year, same idea — name BOTH</p>`;
+  if(r.type==="pieces"){
+    const open=new Set((v.tileOrder||[]).slice(0,v.tiles));
+    let tiles="";for(let i=0;i<24;i++)tiles+=`<div class="tile ${open.has(i)?"open":""}"></div>`;
+    return `<div class="piecebox"><img src="${imgSrc(q.img)}" alt=""><div class="tilegrid">${tiles}</div></div>`;
+  }
+  return "";
+}
+function liveRevealHTML(d){
+  if(!d)return "";
+  let inner="";
+  if(d.kind==="list")inner=`<div class="clues" style="margin:12px 0">${d.items.map(x=>`<div class="clue" style="text-align:left">${esc(x)}</div>`).join("")}</div>`;
+  else if(d.kind==="twins")inner=`<div class="posters">${d.ai?`<img src="${imgSrc(d.ai)}" alt="">`:""}${d.bi?`<img src="${imgSrc(d.bi)}" alt="">`:""}</div><div class="ans" style="font-size:24px">${esc(d.a)} + ${esc(d.b)}</div>`;
+  else if(d.kind==="pieces")inner=`<div class="piecebox" style="max-width:280px"><img src="${imgSrc(d.img)}" alt=""></div><div class="ans">${esc(d.display)}</div>`;
+  else inner=`<div class="ans">${esc(d.text)}</div>`;
+  return inner+(d.fact?`<div class="fact">🎬 ${d.fact}</div>`:"");
+}
+function renderLiveHost(){
+  if(!L||L.role!=="host")return;
+  window.scrollTo(0,0);
+  const v=viewPayload().v;
+  const buzzingName=L.lockedBy?((L.players[L.lockedBy]||{}).name):null;
+  const chips=liveScoresChips(v,buzzingName);
+  let body="";
+  if(L.screen==="lobby"){
+    const n=Object.keys(L.players).length;
+    body=`<div class="card center" style="padding:36px 22px">
+      <div class="tag">room code</div>
+      <div class="display" style="font-size:64px;letter-spacing:.18em;color:var(--red);margin:12px 0">${L.code}</div>
+      <p class="muted" style="margin-bottom:6px">players: open <b>this site</b> on a phone → <b>Live room</b> → enter the code</p>
+      ${chips||'<p class="muted" style="font-size:13px;margin-top:10px">waiting for players…</p>'}
+      <div style="margin-top:22px"><button class="btn btn-gold" ${n?"":"disabled"} onclick="liveStart()">Start game</button></div>
+    </div>`;
+  }else if(L.screen==="roundIntro"){
+    const r=L.game.rounds[L.ri];
+    body=`<div class="roundintro">
+      <div class="num">Round ${L.ri+1} of ${L.game.rounds.length}</div>
+      <h2 class="display">${esc(r.name)}</h2><div class="rule">${r.rule||""}</div>
+      <button class="btn btn-gold" onclick="liveBeginQ()">Show first question</button></div>${chips}`;
+  }else if(L.screen==="question"){
+    const r=L.game.rounds[L.ri],q=r.questions[L.qi];
+    body=`<div class="qhead"><span class="qnum">R${L.ri+1} · Q${L.qi+1}/${r.questions.length}</span><span class="potbadge">${livePot()} pts</span></div>
+    ${liveQHTML(r,q,v)}
+    <div class="card" style="margin-top:16px;padding:16px">
+      ${L.lockedBy
+        ?`<p style="font-weight:800;font-size:18px;margin-bottom:10px">🔔 ${esc(buzzingName||"?")} buzzed — they answer out loud!</p>
+          <div class="formactions" style="margin-top:0">
+            <button class="btn btn-gold btn-sm" onclick="liveJudge(true)">✓ Correct +${livePot()}</button>
+            <button class="btn btn-ghost btn-sm" onclick="liveJudge(false)">✗ Wrong</button>
+          </div>`
+        :`<div class="formactions" style="margin-top:0;align-items:center">
+            <span class="muted" style="font-size:14px">waiting for a buzz…</span>
+            <button class="btn btn-ghost btn-sm" onclick="liveReveal()">Reveal answer</button>
+          </div>`}
+    </div>${chips}`;
+  }else if(L.screen==="reveal"){
+    body=`<div class="card revealcard">${liveRevealHTML(L.revealData)}
+      <button class="btn btn-gold" onclick="liveNext()">Next</button></div>${chips}`;
+  }else if(L.screen==="scores"){
+    body=`<div class="card center" style="padding:32px"><div class="tag">Round ${L.ri+1} complete</div>
+      <div style="margin-top:16px">${chips}</div>
+      <div style="margin-top:20px"><button class="btn btn-gold" onclick="liveNextRound()">Next round</button></div></div>`;
+  }else if(L.screen==="final"){
+    const ranked=Object.values(L.players).sort((a,b)=>b.score-a.score);
+    body=`<div class="center"><div class="marquee">The End</div>
+      ${ranked.map((p,i)=>`<div class="card" style="margin:10px 0;padding:16px;text-align:left"><b>${i+1}. ${esc(p.name)}</b> — ${p.score} pts ${i===0?"🏆":""}</div>`).join("")}
+      <button class="btn btn-ghost" style="margin-top:8px" onclick="liveLeave();S=null;render()">Done</button></div>`;
+  }
+  app().innerHTML=`<div class="topbar"><div class="brand">Final Cut · Live</div>
+    <div style="display:flex;gap:8px;align-items:center"><span class="tag">room ${L.code}</span>
+    <button class="btn btn-ghost btn-sm" onclick="if(confirm('End the live room?')){liveLeave();S=null;render();}">✕ end</button></div></div>`+body;
+}
+
+/* ---- player ---- */
+function liveJoin(code,name){
+  if(typeof Peer==="undefined")return toast("Live rooms need internet — PeerJS didn't load");
+  liveLeave();
+  L={role:"player",code:code.toUpperCase(),name,peer:null,conn:null,game:null,view:{screen:"connecting"},myId:null,buzzed:false};
+  const peer=new Peer();
+  L.peer=peer;
+  peer.on("open",id=>{
+    if(!L)return;
+    L.myId=id;
+    const conn=peer.connect("finalcut-"+code.toLowerCase(),{reliable:true});
+    L.conn=conn;
+    conn.on("open",()=>{try{conn.send({t:"hello",name});}catch(e){}});
+    conn.on("data",d=>playerMsg(d));
+    conn.on("close",()=>{if(L){L.view={screen:"disconnected"};renderLivePlayer();}});
+  });
+  peer.on("error",e=>{if(L){L.view={screen:"error"};renderLivePlayer();}});
+  renderLivePlayer();
+}
+function playerMsg(d){
+  if(!L||L.role!=="player"||!d)return;
+  if(d.t==="welcome")L.game=d.game;
+  if(d.t==="view"){L.view=d.v;if(d.v.screen!=="question")L.buzzed=false;}
+  renderLivePlayer();
+}
+function buzz(){
+  if(!L||L.buzzed||!L.conn)return;
+  L.buzzed=true;
+  try{L.conn.send({t:"buzz"});}catch(e){}
+  renderLivePlayer();
+}
+function renderLivePlayer(){
+  if(!L||L.role!=="player")return;
+  const v=L.view||{};
+  const head=`<div class="topbar"><div class="brand">Final Cut · Live</div><span class="tag">room ${esc(L.code)}</span></div>`;
+  let body="";
+  if(!v.screen||v.screen==="connecting")body=`<div class="card center" style="padding:44px">connecting to room ${esc(L.code)}…</div>`;
+  else if(v.screen==="error")body=`<div class="card center" style="padding:44px">Couldn't find room <b>${esc(L.code)}</b>.<div style="margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="renderLiveEntry()">try again</button></div></div>`;
+  else if(v.screen==="disconnected")body=`<div class="card center" style="padding:44px">Disconnected from the host.<div style="margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="renderLiveEntry()">rejoin</button></div></div>`;
+  else if(v.screen==="lobby")body=`<div class="card center" style="padding:40px 22px"><div class="tag">you're in!</div>
+    <p style="margin:16px 0 4px;font-size:17px">Hi <b>${esc(L.name)}</b> — waiting for the host to start…</p>${liveScoresChips(v)}</div>`;
+  else if(v.screen==="roundIntro"){
+    const r=L.game&&L.game.rounds[v.ri];
+    body=`<div class="roundintro"><div class="num">Round ${v.ri+1}</div><h2 class="display">${esc(r?r.name:"")}</h2>
+    <div class="rule">${r?(r.rule||""):""}</div><p class="muted">get your buzzer finger ready…</p></div>`;
+  }
+  else if(v.screen==="question"){
+    const r=L.game&&L.game.rounds[v.ri],q=r&&r.questions[v.qi];
+    const out=(v.buzzedOut||[]).includes(L.myId);
+    let buzzArea;
+    if(v.lockedId===L.myId)buzzArea=`<div class="buzzmsg you">🔔 YOU'RE UP — answer out loud!</div>`;
+    else if(v.lockedBy)buzzArea=`<div class="buzzmsg">🔔 ${esc(v.lockedBy)} buzzed…</div>`;
+    else if(out)buzzArea=`<div class="buzzmsg out">locked out of this one 😬</div>`;
+    else buzzArea=`<button class="buzzbtn" onclick="buzz()">BUZZ</button>`;
+    body=`<div class="qhead"><span class="qnum">R${v.ri+1} · Q${v.qi+1}</span><span class="potbadge">${v.pot} pts</span></div>
+      ${q?liveQHTML(r,q,v):""}
+      <div class="center" style="margin:22px 0">${buzzArea}</div>`;
+  }
+  else if(v.screen==="reveal")body=`<div class="card revealcard">${liveRevealHTML(v.reveal)}</div>${liveScoresChips(v)}`;
+  else if(v.screen==="scores")body=`<div class="card center" style="padding:32px"><div class="tag">scores</div><div style="margin-top:16px">${liveScoresChips(v)}</div></div>`;
+  else if(v.screen==="final"){
+    const ranked=Object.entries(v.scores||{}).sort((a,b)=>b[1]-a[1]);
+    body=`<div class="center"><div class="marquee">The End</div>
+      ${ranked.map(([n,s],i)=>`<div class="card" style="margin:10px 0;padding:16px;text-align:left"><b>${i+1}. ${esc(n)}</b> — ${s} pts ${i===0?"🏆":""}</div>`).join("")}
+      <button class="btn btn-ghost" style="margin-top:8px" onclick="liveLeave();S=null;render()">Done</button></div>`;
+  }
+  app().innerHTML=head+body;
 }
 
 /* ---------- boot ---------- */
