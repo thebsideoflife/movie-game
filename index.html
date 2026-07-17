@@ -210,6 +210,8 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .scorechip b{color:var(--red)}
 .scorechip.buzzing{border-color:var(--red);box-shadow:0 0 0 3px var(--glow)}
 
+.hostans{background:#fffdf2;border:1.5px dashed #dfc46a;border-radius:12px;padding:12px 16px;margin-top:14px;font-size:14.5px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
+
 /* TMDB panel */
 .tmdb{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(30,15,15,.12);z-index:98;padding:20px;overflow-y:auto}
 .tmdb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -1383,7 +1385,7 @@ function liveHostStart(gameObj,attempt){
   if(!game.rounds.length)return toast("That game has no questions yet");
   liveLeave();
   const code=liveCode();
-  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[]};
+  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",auto:false,showAns:true,typedAnswer:null};
   const peer=new Peer("finalcut-"+code.toLowerCase());
   L.peer=peer;
   peer.on("open",()=>{if(L)renderLiveHost();});
@@ -1413,12 +1415,20 @@ function hostMsg(conn,d){
     if(L.screen!=="question"||L.lockedBy||L.buzzedOut.includes(conn.peer)||!L.players[conn.peer])return;
     L.lockedBy=conn.peer;stopLiveTimers();bcastView();renderLiveHost();
   }
+  if(d.t==="answer"){
+    if(L.screen!=="question"||conn.peer!==L.lockedBy)return;
+    const q=L.game.rounds[L.ri].questions[L.qi];
+    const text=String(d.text||"").slice(0,120);
+    L.typedAnswer={name:(L.players[conn.peer]||{}).name||"?",text,ok:(q&&q.answers&&q.answers.length)?isMatch(text,q.answers):null};
+    bcastView();renderLiveHost();
+  }
 }
 function viewPayload(){
   return {t:"view",v:{screen:L.screen,ri:L.ri,qi:L.qi,cluesShown:L.cluesShown,tiles:L.tiles,
     tileOrder:L.tileOrder,shuffled:L.shufOrder,
     lockedBy:L.lockedBy?((L.players[L.lockedBy]||{}).name||"?"):null,lockedId:L.lockedBy,
-    buzzedOut:L.buzzedOut.slice(),pot:livePot(),
+    buzzedOut:L.buzzedOut.slice(),pot:livePot(),answerMode:L.answerMode,
+    typed:L.typedAnswer?{name:L.typedAnswer.name,text:L.typedAnswer.text}:null,
     scores:Object.fromEntries(Object.values(L.players).map(p=>[p.name,p.score])),
     reveal:L.revealData}};
 }
@@ -1433,10 +1443,11 @@ function livePot(){
 function liveStart(){L.screen="roundIntro";bcastView();renderLiveHost();}
 function liveBeginQ(){
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
-  L.screen="question";L.cluesShown=1;L.tiles=4;L.lockedBy=null;L.buzzedOut=[];L.revealData=null;
+  L.screen="question";L.cluesShown=1;L.tiles=4;L.lockedBy=null;L.buzzedOut=[];L.revealData=null;L.typedAnswer=null;
   L.tileOrder=piecesOrder();
   L.shufOrder=q.items?shuffled(q.items.map((x,i)=>i)):[];
-  startLiveTimers();bcastView();renderLiveHost();
+  if(L.auto)startLiveTimers();
+  bcastView();renderLiveHost();
 }
 function startLiveTimers(){
   stopLiveTimers();
@@ -1449,10 +1460,23 @@ function startLiveTimers(){
   },2500);
 }
 function stopLiveTimers(){if(L&&L.interval){clearInterval(L.interval);L.interval=null;}}
+function hostAdvance(){
+  const r=L.game.rounds[L.ri],q=r.questions[L.qi];
+  if(r.type==="listReveal"&&L.cluesShown<q.clues.length)L.cluesShown++;
+  else if(r.type==="pieces"&&L.tiles<24)L.tiles=Math.min(24,L.tiles+2);
+  bcastView();renderLiveHost();
+}
+function toggleAuto(){L.auto=!L.auto;if(L.auto)startLiveTimers();else stopLiveTimers();renderLiveHost();}
+function hostAnswerText(r,q){
+  if(r.type==="ordering")return q.items.map((it,i)=>(i+1)+". "+it.label).join("   ");
+  if(r.type==="math")return q.parts.map(p=>p.display).join("  /  ");
+  if(r.type==="twins")return q.a.display+" + "+q.b.display;
+  return q.display||(q.answers&&q.answers[0])||"—";
+}
 function liveJudge(ok){
   if(!L.lockedBy)return;
   if(ok){L.players[L.lockedBy].score+=livePot();liveReveal();}
-  else{L.buzzedOut.push(L.lockedBy);L.lockedBy=null;startLiveTimers();bcastView();renderLiveHost();}
+  else{L.buzzedOut.push(L.lockedBy);L.lockedBy=null;L.typedAnswer=null;if(L.auto)startLiveTimers();bcastView();renderLiveHost();}
 }
 function liveRevealData(){
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
@@ -1513,7 +1537,12 @@ function renderLiveHost(){
       <div class="display" style="font-size:64px;letter-spacing:.18em;color:var(--red);margin:12px 0">${L.code}</div>
       <p class="muted" style="margin-bottom:6px">players: open <b>this site</b> on a phone → <b>Live room</b> → enter the code</p>
       ${chips||'<p class="muted" style="font-size:13px;margin-top:10px">waiting for players…</p>'}
-      <div style="margin-top:22px"><button class="btn btn-gold" ${n?"":"disabled"} onclick="liveStart()">Start game</button></div>
+      <div class="formactions" style="justify-content:center;margin-top:20px;align-items:center">
+        <span class="muted" style="font-size:13px">Answers:</span>
+        <button class="typechip ${L.answerMode==="voice"?"sel":""}" onclick="L.answerMode='voice';renderLiveHost()">🎤 out loud</button>
+        <button class="typechip ${L.answerMode==="typed"?"sel":""}" onclick="L.answerMode='typed';renderLiveHost()">⌨️ typed on phones</button>
+      </div>
+      <div style="margin-top:16px"><button class="btn btn-gold" ${n?"":"disabled"} onclick="liveStart()">Start game</button></div>
     </div>`;
   }else if(L.screen==="roundIntro"){
     const r=L.game.rounds[L.ri];
@@ -1523,17 +1552,26 @@ function renderLiveHost(){
       <button class="btn btn-gold" onclick="liveBeginQ()">Show first question</button></div>${chips}`;
   }else if(L.screen==="question"){
     const r=L.game.rounds[L.ri],q=r.questions[L.qi];
+    const canAdvance=(r.type==="listReveal"&&L.cluesShown<q.clues.length)||(r.type==="pieces"&&L.tiles<24);
+    const advLabel=r.type==="pieces"?"▶ Reveal more":"▶ Next clue";
     body=`<div class="qhead"><span class="qnum">R${L.ri+1} · Q${L.qi+1}/${r.questions.length}</span><span class="potbadge">${livePot()} pts</span></div>
     ${liveQHTML(r,q,v)}
-    <div class="card" style="margin-top:16px;padding:16px">
+    <div class="hostans">${L.showAns?`<b>Answer:</b> ${esc(hostAnswerText(r,q))}`:`<span class="muted">answer hidden</span>`}
+      <button class="btn btn-ghost btn-sm" style="margin-left:10px" onclick="L.showAns=!L.showAns;renderLiveHost()">${L.showAns?"hide":"show"}</button>
+      <span class="muted" style="font-size:11.5px;margin-left:8px">host only — hide if sharing this screen</span></div>
+    <div class="card" style="margin-top:12px;padding:16px">
       ${L.lockedBy
-        ?`<p style="font-weight:800;font-size:18px;margin-bottom:10px">🔔 ${esc(buzzingName||"?")} buzzed — they answer out loud!</p>
+        ?`<p style="font-weight:800;font-size:18px;margin-bottom:6px">🔔 ${esc(buzzingName||"?")} buzzed${L.answerMode==="typed"?"!":" — they answer out loud!"}</p>
+          ${L.answerMode==="typed"?(L.typedAnswer
+            ?`<p style="font-size:17px;margin-bottom:10px">typed: <b>“${esc(L.typedAnswer.text)}”</b> ${L.typedAnswer.ok===true?'<span style="color:var(--good);font-weight:800">· fuzzy match ✓</span>':L.typedAnswer.ok===false?'<span style="color:var(--bad);font-weight:800">· no match ✗</span>':""}</p>`
+            :`<p class="muted" style="margin-bottom:10px">waiting for their typed answer…</p>`):""}
           <div class="formactions" style="margin-top:0">
             <button class="btn btn-gold btn-sm" onclick="liveJudge(true)">✓ Correct +${livePot()}</button>
             <button class="btn btn-ghost btn-sm" onclick="liveJudge(false)">✗ Wrong</button>
           </div>`
         :`<div class="formactions" style="margin-top:0;align-items:center">
-            <span class="muted" style="font-size:14px">waiting for a buzz…</span>
+            ${canAdvance?`<button class="btn btn-gold btn-sm" onclick="hostAdvance()">${advLabel}</button>
+            <button class="typechip ${L.auto?"sel":""}" onclick="toggleAuto()" title="auto-reveal on a timer">⏱ auto ${L.auto?"on":"off"}</button>`:`<span class="muted" style="font-size:14px">waiting for a buzz…</span>`}
             <button class="btn btn-ghost btn-sm" onclick="liveReveal()">Reveal answer</button>
           </div>`}
     </div>${chips}`;
@@ -1559,7 +1597,7 @@ function renderLiveHost(){
 function liveJoin(code,name){
   if(typeof Peer==="undefined")return toast("Live rooms need internet — PeerJS didn't load");
   liveLeave();
-  L={role:"player",code:code.toUpperCase(),name,peer:null,conn:null,game:null,view:{screen:"connecting"},myId:null,buzzed:false};
+  L={role:"player",code:code.toUpperCase(),name,peer:null,conn:null,game:null,view:{screen:"connecting"},myId:null,buzzed:false,sentAnswer:false};
   const peer=new Peer();
   L.peer=peer;
   peer.on("open",id=>{
@@ -1577,7 +1615,18 @@ function liveJoin(code,name){
 function playerMsg(d){
   if(!L||L.role!=="player"||!d)return;
   if(d.t==="welcome")L.game=d.game;
-  if(d.t==="view"){L.view=d.v;if(d.v.screen!=="question")L.buzzed=false;}
+  if(d.t==="view"){
+    L.view=d.v;
+    if(d.v.screen!=="question")L.buzzed=false;
+    if(d.v.screen!=="question"||d.v.lockedId!==L.myId)L.sentAnswer=false;
+  }
+  renderLivePlayer();
+}
+function sendAnswer(){
+  const e=document.getElementById("panswer");
+  if(!e||!e.value.trim()||!L||!L.conn)return;
+  L.sentAnswer=true;
+  try{L.conn.send({t:"answer",text:e.value.trim()});}catch(err){}
   renderLivePlayer();
 }
 function buzz(){
@@ -1605,8 +1654,18 @@ function renderLivePlayer(){
     const r=L.game&&L.game.rounds[v.ri],q=r&&r.questions[v.qi];
     const out=(v.buzzedOut||[]).includes(L.myId);
     let buzzArea;
-    if(v.lockedId===L.myId)buzzArea=`<div class="buzzmsg you">🔔 YOU'RE UP — answer out loud!</div>`;
-    else if(v.lockedBy)buzzArea=`<div class="buzzmsg">🔔 ${esc(v.lockedBy)} buzzed…</div>`;
+    if(v.lockedId===L.myId){
+      if(v.answerMode==="typed"){
+        buzzArea=L.sentAnswer
+          ?`<div class="buzzmsg you">answer sent — host is checking…</div>`
+          :`<div class="buzzmsg you">🔔 YOU'RE UP!</div>
+            <div class="answerbar" style="max-width:420px;margin:14px auto 0">
+              <input type="text" id="panswer" placeholder="type your answer…" autocomplete="off" onkeydown="if(event.key==='Enter')sendAnswer()">
+              <button class="btn btn-gold" onclick="sendAnswer()">Send</button>
+            </div>`;
+      }else buzzArea=`<div class="buzzmsg you">🔔 YOU'RE UP — answer out loud!</div>`;
+    }
+    else if(v.lockedBy)buzzArea=`<div class="buzzmsg">🔔 ${esc(v.lockedBy)} buzzed…${v.typed?`<br><span class="muted" style="font-size:14px">“${esc(v.typed.text)}”</span>`:""}</div>`;
     else if(out)buzzArea=`<div class="buzzmsg out">locked out of this one 😬</div>`;
     else buzzArea=`<button class="buzzbtn" onclick="buzz()">BUZZ</button>`;
     body=`<div class="qhead"><span class="qnum">R${v.ri+1} · Q${v.qi+1}</span><span class="potbadge">${v.pot} pts</span></div>
@@ -1621,7 +1680,11 @@ function renderLivePlayer(){
       ${ranked.map(([n,s],i)=>`<div class="card" style="margin:10px 0;padding:16px;text-align:left"><b>${i+1}. ${esc(n)}</b> — ${s} pts ${i===0?"🏆":""}</div>`).join("")}
       <button class="btn btn-ghost" style="margin-top:8px" onclick="liveLeave();S=null;render()">Done</button></div>`;
   }
+  const prev=document.getElementById("panswer");
+  const keep=prev?{v:prev.value,f:document.activeElement===prev}:null;
   app().innerHTML=head+body;
+  const ni=document.getElementById("panswer");
+  if(ni&&keep){ni.value=keep.v;if(keep.f)ni.focus();}
 }
 
 /* ---------- boot ---------- */
