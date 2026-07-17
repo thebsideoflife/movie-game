@@ -8,20 +8,20 @@
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Fraunces:ital,wght@0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0a0a0d; --panel:#151318; --panel2:#1d1a21; --line:#2f2a34;
-  --red:#e0261f; --red2:#ff5a3c; --glow:rgba(224,38,31,.35);
-  --steel:#c9cfd8; --text:#edeef1; --muted:#948f9c;
-  --good:#4ade80; --bad:#f87171; --radius:18px;
+  --bg:#faf9fb; --panel:#ffffff; --panel2:#f3f1f6; --line:#e5e2ea;
+  --red:#d6221c; --red2:#ef4136; --glow:rgba(214,34,28,.22);
+  --steel:#3a3542; --text:#221f28; --muted:#6f6a7a;
+  --good:#16a34a; --bad:#dc2626; --radius:18px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{
   background:var(--bg); color:var(--text);
   font-family:'Inter',system-ui,-apple-system,sans-serif;
-  background-image:radial-gradient(1100px 560px at 50% -180px, #2a1114 0%, var(--bg) 62%);
+  background-image:radial-gradient(1100px 560px at 50% -180px, #f7e6e3 0%, var(--bg) 62%);
   min-height:100dvh;
 }
-.wrap{max-width:640px;margin:0 auto;padding:20px 16px 60px}
+.wrap{max-width:680px;margin:0 auto;padding:20px 16px 60px}
 .display{font-family:'Anton',Impact,'Arial Black',sans-serif;letter-spacing:.03em;text-transform:uppercase;font-weight:400}
 button{font-family:inherit;cursor:pointer;border:none}
 input,textarea,select{font-family:inherit;font-size:16px}
@@ -29,37 +29,38 @@ input,textarea,select{font-family:inherit;font-size:16px}
 /* ---------- shared ---------- */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:14px 26px;border-radius:10px;font-weight:800;font-size:15px;letter-spacing:.06em;text-transform:uppercase;transition:.15s transform,.15s opacity;user-select:none}
 .btn:active{transform:scale(.97)}
-.btn-gold{background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;box-shadow:0 4px 26px var(--glow);text-shadow:0 1px 2px rgba(0,0,0,.4)}
-.btn-ghost{background:var(--panel2);color:var(--steel);border:1px solid var(--line)}
+.btn-gold{background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;box-shadow:0 6px 20px var(--glow);text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.btn-ghost{background:#fff;color:var(--steel);border:1px solid var(--line)}
+.btn-ghost:hover{border-color:var(--red2)}
 .btn-sm{padding:9px 16px;font-size:12.5px}
 .btn[disabled]{opacity:.4;pointer-events:none}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:0 10px 40px rgba(0,0,0,.35)}
-.tag{display:inline-block;padding:4px 12px;border-radius:6px;font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:rgba(224,38,31,.14);color:var(--red2);border:1px solid rgba(224,38,31,.3)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:0 6px 24px rgba(30,15,15,.06)}
+.tag{display:inline-block;padding:4px 12px;border-radius:6px;font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:rgba(214,34,28,.08);color:var(--red);border:1px solid rgba(214,34,28,.25)}
 .muted{color:var(--muted)}
 .center{text-align:center}
-input[type=text],textarea,select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--text);padding:13px 16px;outline:none}
-input[type=text]:focus,textarea:focus{border-color:var(--red)}
-::placeholder{color:#5f5a68}
+input[type=text],textarea,select{width:100%;background:#fff;border:1px solid var(--line);border-radius:10px;color:var(--text);padding:13px 16px;outline:none}
+input[type=text]:focus,textarea:focus{border-color:var(--red2)}
+::placeholder{color:#a49fae}
 
 /* ---------- header / progress ---------- */
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:10px}
-.brand{font-family:'Anton',Impact,sans-serif;font-size:19px;color:var(--red2);letter-spacing:.09em;cursor:pointer;text-transform:uppercase;text-shadow:0 0 22px var(--glow)}
-.scorepill{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-weight:700;font-size:14px;color:var(--steel)}
-.scorepill b{color:var(--red2)}
-.progress{height:5px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-bottom:22px}
-.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red2));border-radius:99px;transition:width .4s ease;box-shadow:0 0 12px var(--glow)}
+.brand{font-family:'Anton',Impact,sans-serif;font-size:19px;color:var(--red);letter-spacing:.09em;cursor:pointer;text-transform:uppercase}
+.scorepill{background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-weight:700;font-size:14px;color:var(--steel)}
+.scorepill b{color:var(--red)}
+.progress{height:5px;background:#ecebf0;border-radius:99px;overflow:hidden;margin-bottom:22px}
+.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red2));border-radius:99px;transition:width .4s ease}
 
 /* ---------- home ---------- */
-.hero{text-align:center;padding:30px 0 26px}
-.herologo{width:min(380px,80vw);filter:drop-shadow(0 14px 44px rgba(224,38,31,.28));margin-bottom:4px}
+.hero{text-align:center;padding:26px 0 22px}
+.herologo{width:min(360px,78vw);filter:drop-shadow(0 16px 40px rgba(214,34,28,.30));margin-bottom:4px}
 .hero h1{font-family:'Anton',Impact,sans-serif;font-size:clamp(52px,13vw,74px);line-height:.95;text-transform:uppercase;color:var(--steel)}
-.hero h1 em{color:var(--red2);font-style:normal;text-shadow:0 0 34px var(--glow)}
-.hero .sub{color:var(--steel);letter-spacing:.5em;text-transform:uppercase;font-size:12px;font-weight:700;margin-top:10px}
+.hero h1 em{color:var(--red);font-style:normal}
+.hero .sub{color:var(--muted);letter-spacing:.5em;text-transform:uppercase;font-size:12px;font-weight:700;margin-top:10px}
 .hero p{color:var(--muted);margin-top:12px;font-size:15.5px}
-.marquee{display:inline-block;border:2px solid var(--red);border-radius:10px;padding:6px 18px;margin-bottom:18px;color:var(--red2);font-size:12px;font-weight:800;letter-spacing:.25em;text-transform:uppercase;box-shadow:0 0 30px var(--glow), inset 0 0 20px rgba(224,38,31,.08)}
+.marquee{display:inline-block;border:2px solid var(--red);border-radius:10px;padding:6px 18px;margin-bottom:18px;color:var(--red);font-size:12px;font-weight:800;letter-spacing:.25em;text-transform:uppercase}
 .menu{display:grid;gap:14px;margin-top:8px}
-.menucard{display:flex;align-items:center;gap:16px;text-align:left;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px;color:var(--text);transition:.15s border-color,.15s box-shadow}
-.menucard:hover{border-color:var(--red);box-shadow:0 0 30px rgba(224,38,31,.12)}
+.menucard{display:flex;align-items:center;gap:16px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;color:var(--text);transition:.15s border-color,.15s box-shadow;box-shadow:0 4px 18px rgba(30,15,15,.05)}
+.menucard:hover{border-color:var(--red2);box-shadow:0 8px 28px rgba(214,34,28,.12)}
 .menucard .ico{font-size:26px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;background:var(--panel2);border-radius:12px;flex-shrink:0;border:1px solid var(--line)}
 .menucard h3{font-size:16.5px;margin-bottom:3px}
 .menucard p{font-size:13.5px;color:var(--muted);line-height:1.45}
@@ -67,15 +68,15 @@ input[type=text]:focus,textarea:focus{border-color:var(--red)}
 
 /* ---------- round intro ---------- */
 .roundintro{text-align:center;padding:40px 0}
-.roundintro .num{font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--red2);margin-bottom:14px;font-weight:800}
-.roundintro h2{font-family:'Anton',Impact,sans-serif;font-size:clamp(34px,9vw,52px);line-height:1.02;margin-bottom:18px;text-transform:uppercase;color:var(--steel);text-shadow:0 0 30px var(--glow)}
+.roundintro .num{font-size:12px;letter-spacing:.34em;text-transform:uppercase;color:var(--red);margin-bottom:14px;font-weight:800}
+.roundintro h2{font-family:'Anton',Impact,sans-serif;font-size:clamp(34px,9vw,52px);line-height:1.02;margin-bottom:18px;text-transform:uppercase;color:var(--steel)}
 .roundintro .rule{color:var(--muted);font-size:16px;line-height:1.6;max-width:440px;margin:0 auto 30px}
-.pts{color:var(--red2);font-weight:700}
+.pts{color:var(--red);font-weight:700}
 
 /* ---------- question ---------- */
 .qhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .qhead .qnum{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.14em;text-transform:uppercase}
-.potbadge{background:rgba(224,38,31,.13);border:1px solid rgba(224,38,31,.4);color:var(--red2);font-weight:800;border-radius:8px;padding:6px 14px;font-size:14px;transition:.3s;box-shadow:0 0 18px rgba(224,38,31,.12)}
+.potbadge{background:rgba(214,34,28,.07);border:1px solid rgba(214,34,28,.3);color:var(--red);font-weight:800;border-radius:8px;padding:6px 14px;font-size:14px;transition:.3s}
 .prompt{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(22px,5.5vw,30px);line-height:1.25;margin-bottom:20px}
 .answerbar{display:flex;gap:10px;margin-top:20px}
 .answerbar input{flex:1}
@@ -85,59 +86,59 @@ input[type=text]:focus,textarea:focus{border-color:var(--red)}
 
 /* clue list */
 .clues{display:grid;gap:10px}
-.clue{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:13px 16px;font-size:16.5px;animation:pop .35s ease;border-left:3px solid var(--red)}
-.clue.hidden-clue{opacity:.28;border-style:dashed;border-left-style:dashed;color:var(--muted);font-size:14px;text-align:center}
+.clue{background:#fff;border:1px solid var(--line);border-radius:10px;padding:13px 16px;font-size:16.5px;animation:pop .35s ease;border-left:3px solid var(--red);box-shadow:0 2px 10px rgba(30,15,15,.04)}
+.clue.hidden-clue{opacity:.45;border-style:dashed;border-left-style:dashed;color:var(--muted);font-size:14px;text-align:center;box-shadow:none}
 @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
 /* quote */
-.quotecard{background:var(--panel2);border:1px solid var(--line);border-radius:14px;padding:26px 24px;margin-bottom:6px}
+.quotecard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:26px 24px;margin-bottom:6px;box-shadow:0 4px 18px rgba(30,15,15,.05)}
 .quotecard .q{font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:clamp(20px,5vw,26px);line-height:1.4}
-.quotecard .q::before{content:"\201C";color:var(--red2);font-size:1.4em}
-.quotecard .q::after{content:"\201D";color:var(--red2);font-size:1.4em}
+.quotecard .q::before{content:"C";color:var(--red);font-size:1.4em}
+.quotecard .q::after{content:"D";color:var(--red);font-size:1.4em}
 .speakbtn{margin-top:16px;background:none;border:1px solid var(--line);color:var(--muted);border-radius:999px;padding:8px 16px;font-size:13px;font-weight:600}
-.speakbtn:hover{color:var(--red2);border-color:var(--red)}
+.speakbtn:hover{color:var(--red);border-color:var(--red2)}
 
 /* ordering */
 .slots{display:grid;gap:8px;margin-bottom:18px}
-.slot{min-height:52px;border:1.5px dashed var(--line);border-radius:10px;display:flex;align-items:center;padding:0 14px;gap:10px;color:var(--muted);font-size:14px}
-.slot.filled{border-style:solid;border-color:#4a3f47;background:var(--panel2);color:var(--text);font-size:16px;cursor:pointer;font-weight:600}
-.slot .idx{width:24px;height:24px;border-radius:50%;background:var(--panel);border:1px solid rgba(224,38,31,.4);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--red2);flex-shrink:0}
+.slot{min-height:52px;border:1.5px dashed #d5d1dc;border-radius:10px;display:flex;align-items:center;padding:0 14px;gap:10px;color:var(--muted);font-size:14px;background:#fdfcfe}
+.slot.filled{border-style:solid;border-color:#cfc9d8;background:#fff;color:var(--text);font-size:16px;cursor:pointer;font-weight:600}
+.slot .idx{width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid rgba(214,34,28,.35);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--red);flex-shrink:0}
 .pool{display:flex;flex-wrap:wrap;gap:8px}
-.chip{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:999px;padding:11px 18px;font-size:15px;font-weight:600}
-.chip:hover{border-color:var(--red)}
+.chip{background:#fff;border:1px solid var(--line);color:var(--text);border-radius:999px;padding:11px 18px;font-size:15px;font-weight:600;box-shadow:0 2px 8px rgba(30,15,15,.05)}
+.chip:hover{border-color:var(--red2)}
 .chip.used{opacity:.25;pointer-events:none}
 
 /* anagram */
-.scramble{font-family:'Anton',Impact,sans-serif;font-size:clamp(30px,8.5vw,46px);text-align:center;color:var(--red2);letter-spacing:.05em;margin:10px 0 22px;text-transform:uppercase;text-shadow:0 0 30px var(--glow)}
+.scramble{font-family:'Anton',Impact,sans-serif;font-size:clamp(30px,8.5vw,46px);text-align:center;color:var(--red);letter-spacing:.05em;margin:10px 0 22px;text-transform:uppercase}
 .mask{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:clamp(18px,5vw,26px);letter-spacing:.18em;margin-bottom:18px;min-height:34px;word-break:break-word;color:var(--steel)}
 
 /* math */
-.mathrow{background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:10px;border-left:3px solid var(--red)}
+.mathrow{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:10px;border-left:3px solid var(--red);box-shadow:0 2px 10px rgba(30,15,15,.04)}
 .mathrow .clue-t{font-family:'Fraunces',Georgia,serif;font-size:19px;margin-bottom:10px}
-.mathop{text-align:center;font-size:26px;color:var(--red2);font-weight:800;margin:4px 0}
+.mathop{text-align:center;font-size:26px;color:var(--red);font-weight:800;margin:4px 0}
 
 /* twins */
 .twininputs{display:grid;gap:10px;margin-top:18px}
 .posters{display:flex;gap:12px;justify-content:center;margin:16px 0}
-.posters img{width:46%;max-width:220px;border-radius:10px;border:1px solid var(--line);animation:pop .5s ease;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.posters img{width:46%;max-width:220px;border-radius:10px;border:1px solid var(--line);animation:pop .5s ease;box-shadow:0 10px 26px rgba(30,15,15,.18)}
 
 /* pieces */
-.piecebox{position:relative;max-width:420px;margin:0 auto 8px;border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.5)}
+.piecebox{position:relative;max-width:420px;margin:0 auto 8px;border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:0 10px 26px rgba(30,15,15,.15)}
 .piecebox img{width:100%;display:block}
 .tilegrid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(6,1fr)}
-.tile{background:#121014;border:1px solid #0a0a0d;transition:opacity .6s ease}
+.tile{background:#dedae5;border:1px solid #fff;transition:opacity .6s ease}
 .tile.open{opacity:0}
 
 /* reveal */
 .revealcard{text-align:center;padding:34px 24px}
 .bigmark{font-size:46px;margin-bottom:8px}
 .revealcard .verdict{font-weight:800;font-size:20px;margin-bottom:6px}
-.revealcard .ans{font-family:'Anton',Impact,sans-serif;font-size:clamp(26px,7vw,38px);color:var(--red2);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.03em;text-shadow:0 0 26px var(--glow)}
+.revealcard .ans{font-family:'Anton',Impact,sans-serif;font-size:clamp(26px,7vw,38px);color:var(--red);margin:10px 0 4px;text-transform:uppercase;letter-spacing:.03em}
 .revealcard .sub{color:var(--muted);font-size:15px;margin-bottom:8px}
 .fact{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:14px 16px;font-size:14px;color:var(--muted);margin:16px 0;line-height:1.55;text-align:left;border-left:3px solid var(--red)}
-.fact b{color:var(--red2)}
+.fact b{color:var(--red)}
 .ptsline{font-size:17px;margin:10px 0 20px}
-.ptsline b{color:var(--red2);font-size:22px}
+.ptsline b{color:var(--red);font-size:22px}
 
 /* scoreboard / final */
 .scoretable{width:100%;border-collapse:collapse;margin:18px 0}
@@ -145,7 +146,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red)}
 .scoretable td:last-child{text-align:right;font-weight:700}
 .bar{height:8px;background:var(--panel2);border-radius:99px;overflow:hidden;margin-top:6px}
 .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--red),var(--red2));border-radius:99px}
-.finalscore{font-family:'Anton',Impact,sans-serif;font-size:clamp(58px,17vw,92px);color:var(--red2);line-height:1;text-shadow:0 0 44px var(--glow)}
+.finalscore{font-family:'Anton',Impact,sans-serif;font-size:clamp(58px,17vw,92px);color:var(--red);line-height:1}
 .qdots{display:flex;gap:6px;justify-content:center;margin:14px 0}
 .qdot{width:12px;height:12px;border-radius:50%;background:var(--panel2);border:1px solid var(--line)}
 .qdot.hit{background:var(--good);border-color:var(--good)}
@@ -154,18 +155,40 @@ input[type=text]:focus,textarea:focus{border-color:var(--red)}
 
 /* creator / admin */
 .crhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:16px;flex-wrap:wrap}
-.roundblock{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:18px;margin-bottom:14px}
-.roundblock .rb-top{display:flex;gap:8px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
-.roundblock .rb-top input{flex:1;min-width:140px}
-.qrow{display:flex;align-items:center;gap:8px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:14px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:560px){.grid2{grid-template-columns:1fr}}
+.gtile,.rtile{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 4px 18px rgba(30,15,15,.05);transition:.15s border-color,.15s box-shadow,.15s transform;position:relative}
+.gtile:hover,.rtile:hover{border-color:var(--red2);box-shadow:0 8px 28px rgba(214,34,28,.12)}
+.rtile{cursor:pointer}
+.rtile.dragover{border-color:var(--red);box-shadow:0 0 0 3px var(--glow);transform:scale(1.02)}
+.rtile .drag{position:absolute;top:14px;right:14px;color:#b9b4c2;font-size:18px;cursor:grab;user-select:none}
+.gtile h3,.rtile h3{font-size:16px;margin:8px 0 4px;line-height:1.3;word-break:break-word}
+.tilemeta{font-size:12.5px;color:var(--muted)}
+.tileactions{display:flex;gap:4px;margin-top:12px;flex-wrap:wrap}
+.tileactions button{background:var(--panel2);border:1px solid var(--line);color:var(--steel);font-size:13px;padding:6px 10px;border-radius:8px}
+.tileactions button:hover{border-color:var(--red2);color:var(--red)}
+.addtile{border:2px dashed #d5d1dc;border-radius:16px;display:flex;align-items:center;justify-content:center;min-height:120px;color:var(--muted);font-weight:700;background:none;font-size:14.5px}
+.addtile:hover{border-color:var(--red2);color:var(--red)}
+.qrow{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-bottom:8px;font-size:14px}
 .qrow .lbl{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.qrow button{background:none;color:var(--muted);font-size:15px;padding:2px 5px}
-.qrow button:hover{color:var(--red2)}
+.qrow button{background:none;color:#8d879a;font-size:15px;padding:2px 5px}
+.qrow button:hover{color:var(--red)}
 .field{margin-bottom:12px}
 .field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
 .formactions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
 .exportbox{width:100%;height:110px;font-family:ui-monospace,monospace;font-size:11px}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;box-shadow:0 8px 30px rgba(0,0,0,.5);z-index:99;animation:pop .3s ease}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;box-shadow:0 8px 30px rgba(120,20,15,.35);z-index:99;animation:pop .3s ease}
+
+/* TMDB panel */
+.tmdb{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(30,15,15,.12);z-index:98;padding:20px;overflow-y:auto}
+.tmdb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.tmdb-res{margin-top:12px}
+.tmdb-item{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer}
+.tmdb-item:hover{border-color:var(--red2)}
+.tmdb-item img,.noposter{width:44px;height:66px;border-radius:6px;object-fit:cover;flex-shrink:0}
+.noposter{background:var(--panel2);display:flex;align-items:center;justify-content:center}
+.tmdb-detail{display:flex;gap:14px;align-items:flex-start;line-height:1.55;font-size:14px}
+.tmdb-detail img{width:100px;border-radius:8px}
 </style>
 </head>
 <body>
@@ -798,7 +821,7 @@ const DB={
   load(){try{return JSON.parse(localStorage.getItem("fc_games")||"[]")}catch(e){return[]}},
   save(l){try{localStorage.setItem("fc_games",JSON.stringify(l))}catch(e){toast("Couldn't save — storage full?")}}
 };
-let C=null;
+let C=null,dragRi=null;
 function persistC(){
   if(!C)return;
   if(!C._id)C._id="g"+Date.now();
@@ -811,31 +834,31 @@ function openCreator(){renderAdmin();}
 function renderAdmin(){
   window.scrollTo(0,0);C=null;
   const games=DB.load().sort((a,b)=>(b._updated||0)-(a._updated||0));
-  const rows=games.map(g=>{
+  const tiles=games.map(g=>{
     const qn=g.rounds.reduce((s,r)=>s+r.questions.length,0);
-    return `<div class="qrow">
-      <span class="lbl"><b>${esc(g.title||"untitled")}</b> · ${g.rounds.length} rounds · ${qn} questions</span>
-      <button title="Edit" onclick="adminEdit('${g._id}')">✏️</button>
-      <button title="Playtest" onclick="adminPlay('${g._id}')">▶️</button>
-      <button title="Copy share code" onclick="adminCode('${g._id}')">🔗</button>
-      <button title="Duplicate" onclick="adminDup('${g._id}')">📄</button>
-      <button title="Delete" onclick="adminDel('${g._id}')">🗑</button>
+    return `<div class="gtile">
+      <span class="tag">game</span>
+      <h3>${esc(g.title||"untitled")}</h3>
+      <div class="tilemeta">${g.rounds.length} rounds · ${qn} questions</div>
+      <div class="tileactions">
+        <button onclick="adminEdit('${g._id}')">✏️ edit</button>
+        <button onclick="adminPlay('${g._id}')">▶ play</button>
+        <button onclick="adminCode('${g._id}')">🔗 code</button>
+        <button onclick="adminDup('${g._id}')">⧉</button>
+        <button onclick="adminDel('${g._id}')">🗑</button>
+      </div>
     </div>`;}).join("");
   app().innerHTML=`
   <div class="topbar"><div class="brand" onclick="S=null;C=null;render()">Final Cut</div>
-    <button class="btn btn-ghost btn-sm" onclick="S=null;render()">Home</button></div>
+    <button class="btn btn-ghost btn-sm" onclick="S=null;render()">← Home</button></div>
   <div class="crhead"><h2 class="display" style="font-size:26px">Admin portal</h2><span class="tag">saved in this browser</span></div>
-  <div class="card" style="margin-bottom:14px">
-    <h3 style="margin-bottom:10px">Your games</h3>
-    ${rows||'<p class="muted" style="font-size:14px;margin-bottom:6px">No games yet — start one below.</p>'}
-    <div class="formactions">
-      <button class="btn btn-gold btn-sm" onclick="adminNew()">+ New game</button>
-      <button class="btn btn-ghost btn-sm" onclick="adminNewFromS1E1()">+ From S1E1 template</button>
-      <button class="btn btn-ghost btn-sm" onclick="promptImport()">Import code</button>
-    </div>
+  <div class="grid2" style="margin-bottom:14px">
+    ${tiles}
+    <button class="addtile" onclick="adminNew()">+ New game</button>
+    <button class="addtile" onclick="adminNewFromS1E1()">+ From S1E1 template</button>
   </div>
   <div class="card"><h3 style="margin-bottom:8px">How sharing works (POC)</h3>
-  <p class="muted" style="font-size:13.5px;line-height:1.6">Games are auto-saved in this browser. <b>🔗 Copy share code</b> packs a game into a string friends paste under <b>Play a sent game</b>. Phase 2 turns these into real links with accounts, Tuesday/Thursday releases and leaderboards.</p></div>`;
+  <p class="muted" style="font-size:13.5px;line-height:1.6">Games are auto-saved in this browser. <b>🔗 code</b> packs a game into a string friends paste under <b>Play a sent game</b>. Phase 2 turns these into real links with accounts, Tuesday/Thursday releases and leaderboards. <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="promptImport()">Import a code</button></p></div>`;
 }
 function adminFind(id){return DB.load().find(g=>g._id===id);}
 function adminEdit(id){C=adminFind(id);if(C)renderCreator();}
@@ -854,31 +877,27 @@ function adminDup(id){const g=adminFind(id);if(!g)return;const c=JSON.parse(JSON
 function adminDel(id){if(!confirm("Delete this game?"))return;DB.save(DB.load().filter(g=>g._id!==id));renderAdmin();}
 function adminNew(){C={title:"untitled game",author:"",rounds:[]};persistC();renderCreator();}
 function adminNewFromS1E1(){C=JSON.parse(JSON.stringify(GAME_S1E1));C.title="my remix of S1E1";persistC();renderCreator();toast("S1E1 copied — remix away");}
+
+/* ---- game editor: round tiles with drag reorder ---- */
 function renderCreator(){
   window.scrollTo(0,0);persistC();
-  const roundsHTML=C.rounds.map((r,ri)=>`
-    <div class="roundblock">
-      <div class="rb-top">
-        <span class="tag">R${ri+1}</span>
-        <input type="text" value="${esc(r.name)}" placeholder="round name" onchange="C.rounds[${ri}].name=this.value;persistC()">
-        <select onchange="changeType(${ri},this.value)">
-          ${Object.keys(TYPE_META).map(t=>`<option value="${t}" ${r.type===t?"selected":""}>${TYPE_META[t].label}</option>`).join("")}
-        </select>
-        <button class="btn btn-ghost btn-sm" onclick="moveRound(${ri},-1)" title="Move up">↑</button>
-        <button class="btn btn-ghost btn-sm" onclick="moveRound(${ri},1)" title="Move down">↓</button>
-        <button class="btn btn-ghost btn-sm" onclick="delRound(${ri})" title="Delete round">✕</button>
+  const tiles=C.rounds.map((r,ri)=>`
+    <div class="rtile" draggable="true" onclick="renderRoundEditor(${ri})"
+      ondragstart="dragRi=${ri}" ondragend="dragRi=null"
+      ondragover="event.preventDefault();this.classList.add('dragover')"
+      ondragleave="this.classList.remove('dragover')"
+      ondrop="event.preventDefault();this.classList.remove('dragover');dropRound(${ri})">
+      <span class="drag" title="drag to reorder">⠿</span>
+      <span class="tag">R${ri+1}</span>
+      <h3>${esc(r.name||"untitled round")}</h3>
+      <div class="tilemeta">${TYPE_META[r.type].label} · ${r.questions.length} question${r.questions.length===1?"":"s"}</div>
+      <div class="tileactions" onclick="event.stopPropagation()">
+        <button onclick="renderRoundEditor(${ri})">✏️ edit</button>
+        <button title="Duplicate round" onclick="dupRound(${ri})">⧉</button>
+        <button title="Move up" onclick="moveRound(${ri},-1)">↑</button>
+        <button title="Move down" onclick="moveRound(${ri},1)">↓</button>
+        <button title="Delete" onclick="delRound(${ri})">🗑</button>
       </div>
-      <p class="muted" style="font-size:12.5px;margin-bottom:10px">${TYPE_META[r.type].hint}</p>
-      <div class="field"><label>Round rules — shown to players before the round starts</label>
-        <textarea rows="2" onchange="C.rounds[${ri}].rule=this.value;persistC()">${esc(r.rule||"")}</textarea></div>
-      ${r.questions.map((q,qi)=>`
-        <div class="qrow"><span class="lbl">${qi+1}. ${esc(qLabel(r,q))}</span>
-          <button onclick="moveQ(${ri},${qi},-1)" title="Up">↑</button>
-          <button onclick="moveQ(${ri},${qi},1)" title="Down">↓</button>
-          <button onclick="editQ(${ri},${qi})" title="Edit">✏️</button>
-          <button onclick="C.rounds[${ri}].questions.splice(${qi},1);persistC();renderCreator()" title="Delete">🗑</button>
-        </div>`).join("")}
-      <button class="btn btn-ghost btn-sm" onclick="editQ(${ri},-1)">+ add question</button>
     </div>`).join("");
   app().innerHTML=`
   <div class="topbar">
@@ -891,37 +910,174 @@ function renderCreator(){
   </div>
   <div class="card" style="margin-bottom:14px">
     <div class="field"><label>Game title</label><input type="text" value="${esc(C.title)}" onchange="C.title=this.value;persistC();renderCreator()"></div>
-    <div class="field"><label>Host / author</label><input type="text" value="${esc(C.author)}" onchange="C.author=this.value;persistC()" placeholder="you"></div>
+    <div class="field" style="margin-bottom:0"><label>Host / author</label><input type="text" value="${esc(C.author)}" onchange="C.author=this.value;persistC()" placeholder="you"></div>
   </div>
-  ${roundsHTML}
-  <button class="btn btn-ghost" style="width:100%" onclick="addRound()">+ add round</button>
+  <p class="muted" style="font-size:13px;margin:0 2px 10px">Rounds play top-to-bottom — <b>drag tiles to reorder</b>, ⧉ to duplicate.</p>
+  <div class="grid2">
+    ${tiles}
+    <button class="addtile" onclick="addRound()">+ add round</button>
+  </div>
   <div class="card" style="margin-top:16px">
-    <div class="formactions">
+    <div class="formactions" style="margin-top:0">
       <button class="btn btn-gold btn-sm" onclick="testPlay()">▶ Playtest</button>
-      <button class="btn btn-ghost btn-sm" onclick="adminCode(C._id)">Copy share code</button>
+      <button class="btn btn-ghost btn-sm" onclick="adminCode(C._id)">🔗 Copy share code</button>
+      <button class="btn btn-ghost btn-sm" onclick="tmdbPanel()">🎬 Movie research</button>
     </div>
   </div>`;
 }
+function dropRound(target){
+  if(dragRi===null||dragRi===target)return;
+  const r=C.rounds.splice(dragRi,1)[0];
+  C.rounds.splice(target,0,r);
+  dragRi=null;persistC();renderCreator();
+}
+function dupRound(i){
+  const c=JSON.parse(JSON.stringify(C.rounds[i]));
+  c.name=(c.name||"round")+" (copy)";
+  C.rounds.splice(i+1,0,c);persistC();renderCreator();toast("Round duplicated");
+}
 function moveRound(i,d){const j=i+d;if(j<0||j>=C.rounds.length)return;[C.rounds[i],C.rounds[j]]=[C.rounds[j],C.rounds[i]];persistC();renderCreator();}
-function moveQ(ri,i,d){const qs=C.rounds[ri].questions,j=i+d;if(j<0||j>=qs.length)return;[qs[i],qs[j]]=[qs[j],qs[i]];persistC();renderCreator();}
+
+/* ---- round editor ---- */
+function renderRoundEditor(ri){
+  window.scrollTo(0,0);persistC();
+  const r=C.rounds[ri];
+  app().innerHTML=`
+  <div class="topbar">
+    <div class="brand" onclick="S=null;C=null;render()">Final Cut</div>
+    <button class="btn btn-ghost btn-sm" onclick="renderCreator()">← ${esc(C.title||"game")}</button>
+  </div>
+  <div class="crhead">
+    <h2 class="display" style="font-size:24px">Round ${ri+1}</h2>
+    <span class="tag">auto-saved ✓</span>
+  </div>
+  <div class="card" style="margin-bottom:14px">
+    <div class="field"><label>Round name</label><input type="text" value="${esc(r.name)}" onchange="C.rounds[${ri}].name=this.value;persistC()"></div>
+    <div class="field"><label>Round type</label>
+      <select onchange="changeType(${ri},this.value)">
+        ${Object.keys(TYPE_META).map(t=>`<option value="${t}" ${r.type===t?"selected":""}>${TYPE_META[t].label}</option>`).join("")}
+      </select>
+      <p class="muted" style="font-size:12.5px;margin-top:6px">${TYPE_META[r.type].hint}</p>
+    </div>
+    <div class="field" style="margin-bottom:0"><label>Round rules — shown to players before the round starts</label>
+      <textarea rows="2" onchange="C.rounds[${ri}].rule=this.value;persistC()">${esc(r.rule||"")}</textarea></div>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:12px">Questions</h3>
+    ${r.questions.map((q,qi)=>`
+      <div class="qrow"><span class="lbl">${qi+1}. ${esc(qLabel(r,q))}</span>
+        <button onclick="moveQ(${ri},${qi},-1)" title="Up">↑</button>
+        <button onclick="moveQ(${ri},${qi},1)" title="Down">↓</button>
+        <button onclick="dupQ(${ri},${qi})" title="Duplicate">⧉</button>
+        <button onclick="editQ(${ri},${qi})" title="Edit">✏️</button>
+        <button onclick="C.rounds[${ri}].questions.splice(${qi},1);persistC();renderRoundEditor(${ri})" title="Delete">🗑</button>
+      </div>`).join("")||'<p class="muted" style="font-size:14px;margin-bottom:10px">No questions yet.</p>'}
+    <div class="formactions">
+      <button class="btn btn-gold btn-sm" onclick="editQ(${ri},-1)">+ add question</button>
+      <button class="btn btn-ghost btn-sm" onclick="tmdbPanel()">🎬 Movie research</button>
+    </div>
+  </div>`;
+}
+function moveQ(ri,i,d){const qs=C.rounds[ri].questions,j=i+d;if(j<0||j>=qs.length)return;[qs[i],qs[j]]=[qs[j],qs[i]];persistC();renderRoundEditor(ri);}
+function dupQ(ri,qi){const qs=C.rounds[ri].questions;qs.splice(qi+1,0,JSON.parse(JSON.stringify(qs[qi])));persistC();renderRoundEditor(ri);toast("Question duplicated");}
 function qLabel(r,q){
   return q.display||q.prompt||q.quote||q.scramble||(q.parts&&q.parts.map(p=>p.display).join(" / "))||(q.a&&q.a.display+" + "+q.b.display)||"question";
 }
 function addRound(){
   C.rounds.push({name:"round "+(C.rounds.length+1),type:"riddle",rule:"",questions:[]});
-  persistC();renderCreator();
+  persistC();renderRoundEditor(C.rounds.length-1);
 }
 function delRound(i){if(confirm("Delete this round?")){C.rounds.splice(i,1);persistC();renderCreator();}}
 function changeType(ri,t){
   const r=C.rounds[ri];
-  if(r.questions.length&&!confirm("Changing type clears this round's questions. Continue?")){renderCreator();return;}
-  r.type=t;r.questions=[];persistC();renderCreator();
+  if(r.questions.length&&!confirm("Changing type clears this round's questions. Continue?")){renderRoundEditor(ri);return;}
+  r.type=t;r.questions=[];persistC();renderRoundEditor(ri);
 }
 function testPlay(){
   if(!C.rounds.length||!C.rounds.some(r=>r.questions.length))return toast("Add at least one question first");
   const g=JSON.parse(JSON.stringify(C));
   g.rounds=g.rounds.filter(r=>r.questions.length);
   startGame(g);
+}
+
+/* ---- TMDB research panel ---- */
+function tmdbPanel(){
+  const ex=document.getElementById("tmdbpanel");
+  if(ex){ex.remove();return;}
+  const p=document.createElement("div");p.id="tmdbpanel";p.className="tmdb";
+  const key=localStorage.getItem("fc_tmdb")||"";
+  p.innerHTML=`<div class="tmdb-head"><b>🎬 Movie research <span class="muted" style="font-weight:400;font-size:12px">powered by TMDB</span></b>
+    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('tmdbpanel').remove()">✕</button></div>`+
+   (key?`<input type="text" id="tmdbq" placeholder="search any movie… (press Enter)" autocomplete="off"
+      onkeydown="if(event.key==='Enter')tmdbSearch()">
+    <div id="tmdbres" class="tmdb-res"><p class="muted" style="font-size:13px">Search a movie to get year, director, cast, rating, genres and box office — everything you need to write questions.</p></div>
+    <p class="muted" style="font-size:11.5px;margin-top:10px"><a href="#" onclick="localStorage.removeItem('fc_tmdb');document.getElementById('tmdbpanel').remove();tmdbPanel();return false" style="color:inherit">change API key</a></p>`
+   :`<p class="muted" style="font-size:13.5px;line-height:1.6;margin-bottom:12px">One-time setup: grab a free API key at <b>themoviedb.org</b> → Settings → API → <b>API Key (v3 auth)</b>, then paste it here. It's stored only in this browser.</p>
+    <input type="text" id="tmdbkey" placeholder="paste your TMDB v3 API key">
+    <div style="margin-top:10px"><button class="btn btn-gold btn-sm" onclick="tmdbSaveKey()">Save key</button></div>`);
+  document.body.appendChild(p);
+  const q=document.getElementById("tmdbq");if(q)q.focus();
+}
+function tmdbSaveKey(){
+  const v=(document.getElementById("tmdbkey")?.value||"").trim();
+  if(!v)return toast("Paste a key first");
+  localStorage.setItem("fc_tmdb",v);
+  document.getElementById("tmdbpanel").remove();tmdbPanel();
+}
+async function tmdbSearch(){
+  const key=localStorage.getItem("fc_tmdb"),q=(document.getElementById("tmdbq")?.value||"").trim();
+  const res=document.getElementById("tmdbres");
+  if(!q||!res)return;
+  res.innerHTML='<p class="muted">searching…</p>';
+  try{
+    const r=await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${encodeURIComponent(key)}&query=${encodeURIComponent(q)}`);
+    const j=await r.json();
+    if(j.status_code)throw new Error(j.status_message);
+    res.innerHTML=(j.results||[]).slice(0,7).map(m=>`
+      <div class="tmdb-item" onclick="tmdbDetail(${m.id})">
+        ${m.poster_path?`<img src="https://image.tmdb.org/t/p/w92${m.poster_path}" alt="">`:`<div class="noposter">🎬</div>`}
+        <div><b>${esc(m.title)}</b> <span class="muted">(${(m.release_date||"").slice(0,4)||"?"})</span><br>
+        <span class="muted" style="font-size:12px">★ ${m.vote_average?m.vote_average.toFixed(1):"–"}</span></div>
+      </div>`).join("")||'<p class="muted">No results.</p>';
+  }catch(e){res.innerHTML='<p class="muted">Error — double-check your API key (v3), then try again.</p>';}
+}
+async function tmdbDetail(id){
+  const key=localStorage.getItem("fc_tmdb");
+  const res=document.getElementById("tmdbres");if(!res)return;
+  res.innerHTML='<p class="muted">loading…</p>';
+  try{
+    const r=await fetch(`https://api.themoviedb.org/3/movie/${id}?api_key=${encodeURIComponent(key)}&append_to_response=credits`);
+    const m=await r.json();
+    if(m.status_code)throw 0;
+    const dir=((m.credits||{}).crew||[]).find(c=>c.job==="Director");
+    const cast=((m.credits||{}).cast||[]).slice(0,6).map(c=>c.name);
+    res.innerHTML=`
+      <div class="tmdb-detail">
+        ${m.poster_path?`<img src="https://image.tmdb.org/t/p/w154${m.poster_path}" alt="">`:""}
+        <div>
+          <b style="font-size:16px">${esc(m.title)}</b> (${(m.release_date||"").slice(0,4)||"?"})<br>
+          <span class="muted">
+          released: ${m.release_date||"?"}<br>
+          director: ${esc(dir?dir.name:"—")}<br>
+          IMDb-style rating: ★ ${m.vote_average?m.vote_average.toFixed(1):"–"}<br>
+          genres: ${(m.genres||[]).map(g=>esc(g.name)).join(", ")||"—"}<br>
+          runtime: ${m.runtime?m.runtime+" min":"—"}<br>
+          box office: ${m.revenue?"$"+m.revenue.toLocaleString():"—"}<br>
+          cast: ${cast.map(esc).join(", ")||"—"}</span>
+        </div>
+      </div>
+      <div class="formactions">
+        <button class="btn btn-ghost btn-sm" onclick="tmdbSearch()">← results</button>
+        <button class="btn btn-ghost btn-sm" onclick="tmdbCopy()">copy facts</button>
+      </div>
+      <textarea id="tmdbfacts" style="position:absolute;left:-9999px">${esc(m.title)} (${(m.release_date||"").slice(0,4)})\ndirector: ${esc(dir?dir.name:"")}\nrating: ${m.vote_average?m.vote_average.toFixed(1):""}\ngenres: ${(m.genres||[]).map(g=>g.name).join(", ")}\ncast: ${cast.join(", ")}\nbox office: ${m.revenue||""}</textarea>`;
+  }catch(e){res.innerHTML='<p class="muted">Error loading details.</p>';}
+}
+function tmdbCopy(){
+  const t=document.getElementById("tmdbfacts");if(!t)return;
+  (navigator.clipboard?navigator.clipboard.writeText(t.value):Promise.reject())
+    .then(()=>toast("Facts copied"))
+    .catch(()=>{prompt("Copy:",t.value);});
 }
 
 /* --- question editor (simple per-type forms) --- */
@@ -986,13 +1142,13 @@ function editQ(ri,qi){
   }
   app().innerHTML=`
   <div class="topbar"><div class="brand">Final Cut</div>
-    <button class="btn btn-ghost btn-sm" onclick="renderCreator()">← back</button></div>
+    <button class="btn btn-ghost btn-sm" onclick="renderRoundEditor(${ri})">← back</button></div>
   <div class="card">
     <div class="tag" style="margin-bottom:14px">${TYPE_META[t].label}</div>
     ${fields}
     <div class="formactions">
       <button class="btn btn-gold" onclick="saveQ(${ri},${qi})">Save question</button>
-      <button class="btn btn-ghost" onclick="renderCreator()">Cancel</button>
+      <button class="btn btn-ghost" onclick="renderRoundEditor(${ri})">Cancel</button>
     </div>
   </div>`;
 }
@@ -1023,7 +1179,7 @@ function saveQ(ri,qi){
   if(t==="math"&&q.parts.some(p=>!p.answers.length))return toast("Each math line needs answers");
   if(t==="twins"&&(!q.a.answers.length||!q.b.answers.length))return toast("Both movies need answers");
   if(qi>=0)r.questions[qi]=q;else r.questions.push(q);
-  persistC();renderCreator();
+  persistC();renderRoundEditor(ri);
 }
 
 /* ---------- boot ---------- */
