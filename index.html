@@ -215,6 +215,12 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 
 .hostans{background:#fffdf2;border:1.5px dashed #dfc46a;border-radius:12px;padding:12px 16px;margin-top:14px;font-size:14.5px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
 
+#videostrip{position:fixed;top:12px;right:12px;display:flex;flex-wrap:wrap;gap:8px;z-index:95;max-width:46vw;justify-content:flex-end}
+.vtile{width:124px;aspect-ratio:4/3;border-radius:10px;overflow:hidden;background:#000;position:relative;box-shadow:0 8px 22px rgba(0,0,0,.3);border:2px solid #fff}
+.vtile video{width:100%;height:100%;object-fit:cover;display:block}
+.vtile span{position:absolute;bottom:3px;left:7px;color:#fff;font-size:10.5px;font-weight:700;text-shadow:0 1px 3px rgba(0,0,0,.8)}
+@media(max-width:700px){#videostrip{max-width:100vw;left:0;right:0;top:0;padding:6px;justify-content:center;background:rgba(255,255,255,.6);backdrop-filter:blur(6px)}.vtile{width:86px}}
+
 /* TMDB panel */
 .tmdb{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(30,15,15,.12);z-index:98;padding:20px;overflow-y:auto}
 .tmdb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -1355,7 +1361,87 @@ function saveQ(ri,qi){
    ===================================================== */
 let L=null;
 function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
-function liveLeave(){try{stopLiveTimers();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
+function liveLeave(){try{stopLiveTimers();destroyVideo();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
+/* ---- live video (mesh, host audio only) ---- */
+let V={stream:null,calls:{},els:{}};
+function ensureStrip(){
+  let s=document.getElementById("videostrip");
+  if(!s){s=document.createElement("div");s.id="videostrip";document.body.appendChild(s);}
+  return s;
+}
+function addVideo(id,stream,label,muted){
+  const s=ensureStrip();
+  let t=V.els[id];
+  if(!t){
+    t=document.createElement("div");t.className="vtile";
+    t.innerHTML='<video autoplay playsinline></video><span></span>';
+    s.appendChild(t);V.els[id]=t;
+  }
+  const vid=t.querySelector("video");
+  vid.muted=!!muted;
+  vid.srcObject=stream;
+  if(vid.play){const p=vid.play();if(p&&p.catch)p.catch(()=>{});}
+  t.querySelector("span").textContent=label||"";
+}
+function removeVideo(id){
+  const t=V.els[id];if(t){t.remove();delete V.els[id];}
+  const c=V.calls[id];if(c){try{c.close()}catch(e){}delete V.calls[id];}
+}
+function destroyVideo(){
+  Object.keys(V.calls).forEach(id=>{try{V.calls[id].close()}catch(e){}});
+  if(V.stream){try{V.stream.getTracks().forEach(t=>t.stop())}catch(e){}}
+  const s=document.getElementById("videostrip");if(s)s.remove();
+  V={stream:null,calls:{},els:{}};
+}
+function liveNameFor(id){
+  if(L&&L.role==="host")return ((L.players[id]||{}).name)||"host";
+  const vp=(L&&L.view&&L.view.vparts)||[];
+  const f=vp.find(p=>p.id===id);return f?f.name:"";
+}
+function handleIncomingCall(call){
+  try{call.answer(V.stream||undefined);}catch(e){}
+  V.calls[call.peer]=call;
+  call.on("stream",rs=>addVideo(call.peer,rs,liveNameFor(call.peer),false));
+  call.on("close",()=>removeVideo(call.peer));
+}
+function callParticipants(){
+  if(!V.stream||!L||!L.peer)return;
+  const vp=L.role==="host"?(L.videoParts||[]):((L.view&&L.view.vparts)||[]);
+  const myId=L.role==="host"?(L.peer.id||""):L.myId;
+  for(const p of vp){
+    if(p.id===myId)break; // only call people who enabled before me
+    if(V.calls[p.id])continue;
+    try{
+      const call=L.peer.call(p.id,V.stream);
+      if(!call)continue;
+      V.calls[p.id]=call;
+      call.on("stream",rs=>addVideo(p.id,rs,p.name,false));
+      call.on("close",()=>removeVideo(p.id));
+    }catch(e){}
+  }
+}
+const VID_CONSTRAINTS={width:{ideal:320},height:{ideal:240},frameRate:{ideal:15},facingMode:"user"};
+async function hostStartVideo(){
+  if(V.stream||!L)return;
+  try{
+    V.stream=await navigator.mediaDevices.getUserMedia({video:VID_CONSTRAINTS,audio:true});
+    addVideo("me",V.stream,"you · mic live",true);
+    L.videoOn=true;
+    L.videoParts=[{id:L.peer.id,name:"host"}];
+    bcastView();renderLiveHost();
+  }catch(e){toast("Camera/mic blocked — check browser permissions");}
+}
+async function playerStartVideo(){
+  if(V.stream||!L||!L.conn)return;
+  try{
+    V.stream=await navigator.mediaDevices.getUserMedia({video:VID_CONSTRAINTS,audio:false});
+    addVideo("me",V.stream,"you",true);
+    callParticipants();
+    try{L.conn.send({t:"camon"});}catch(e){}
+    renderLivePlayer();
+  }catch(e){toast("Camera blocked — check browser permissions");}
+}
+
 function renderLiveEntry(){
   window.scrollTo(0,0);setWide(false);liveLeave();
   const games=DB.load();
@@ -1396,7 +1482,7 @@ function liveHostStart(gameObj,attempt){
   if(!game.rounds.length)return toast("That game has no questions yet");
   liveLeave();
   const code=liveCode();
-  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",auto:false,showAns:true,typedAnswer:null};
+  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[]};
   const peer=new Peer("finalcut-"+code.toLowerCase());
   L.peer=peer;
   peer.on("open",()=>{if(L)renderLiveHost();});
@@ -1404,11 +1490,14 @@ function liveHostStart(gameObj,attempt){
     if(e&&e.type==="unavailable-id"&&attempt<3)return liveHostStart(gameObj,attempt+1);
     toast("Connection error: "+((e&&e.type)||e));
   });
+  peer.on("call",handleIncomingCall);
   peer.on("connection",conn=>{
     conn.on("data",d=>hostMsg(conn,d));
     conn.on("close",()=>{
       if(!L)return;
       delete L.conns[conn.peer];
+      removeVideo(conn.peer);
+      if(L.videoParts)L.videoParts=L.videoParts.filter(p=>p.id!==conn.peer);
       if(L.players[conn.peer]){delete L.players[conn.peer];bcastView();renderLiveHost();}
     });
   });
@@ -1426,6 +1515,12 @@ function hostMsg(conn,d){
     if(L.screen!=="question"||L.lockedBy||L.buzzedOut.includes(conn.peer)||!L.players[conn.peer])return;
     L.lockedBy=conn.peer;stopLiveTimers();bcastView();renderLiveHost();
   }
+  if(d.t==="camon"){
+    if(!L.videoOn||!L.players[conn.peer])return;
+    if((L.videoParts||[]).length>=5)return; // host + 4 max
+    if(!L.videoParts.find(p=>p.id===conn.peer))L.videoParts.push({id:conn.peer,name:(L.players[conn.peer]||{}).name||"player"});
+    bcastView();renderLiveHost();
+  }
   if(d.t==="answer"){
     if(L.screen!=="question"||conn.peer!==L.lockedBy)return;
     const q=L.game.rounds[L.ri].questions[L.qi];
@@ -1439,6 +1534,7 @@ function viewPayload(){
     tileOrder:L.tileOrder,shuffled:L.shufOrder,
     lockedBy:L.lockedBy?((L.players[L.lockedBy]||{}).name||"?"):null,lockedId:L.lockedBy,
     buzzedOut:L.buzzedOut.slice(),pot:livePot(),answerMode:L.answerMode,
+    videoOn:L.videoOn,vparts:L.videoParts||[],
     typed:L.typedAnswer?{name:L.typedAnswer.name,text:L.typedAnswer.text}:null,
     scores:Object.fromEntries(Object.values(L.players).map(p=>[p.name,p.score])),
     reveal:L.revealData}};
@@ -1553,6 +1649,9 @@ function renderLiveHost(){
         <button class="typechip ${L.answerMode==="voice"?"sel":""}" onclick="L.answerMode='voice';renderLiveHost()">🎤 out loud</button>
         <button class="typechip ${L.answerMode==="typed"?"sel":""}" onclick="L.answerMode='typed';renderLiveHost()">⌨️ typed on phones</button>
       </div>
+      ${L.videoOn
+        ?`<p class="muted" style="font-size:12.5px;margin-top:12px">🎥 cameras on — your mic is live to players; they get a "turn on my camera" button (up to 4)</p>`
+        :`<div style="margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="hostStartVideo()">🎥 Turn on cameras + host mic</button></div>`}
       <div style="margin-top:16px"><button class="btn btn-gold" ${n?"":"disabled"} onclick="liveStart()">Start game</button></div>
     </div>`;
   }else if(L.screen==="roundIntro"){
@@ -1611,6 +1710,7 @@ function liveJoin(code,name){
   L={role:"player",code:code.toUpperCase(),name,peer:null,conn:null,game:null,view:{screen:"connecting"},myId:null,buzzed:false,sentAnswer:false};
   const peer=new Peer();
   L.peer=peer;
+  peer.on("call",handleIncomingCall);
   peer.on("open",id=>{
     if(!L)return;
     L.myId=id;
@@ -1630,6 +1730,7 @@ function playerMsg(d){
     L.view=d.v;
     if(d.v.screen!=="question")L.buzzed=false;
     if(d.v.screen!=="question"||d.v.lockedId!==L.myId)L.sentAnswer=false;
+    if(V.stream)callParticipants();
   }
   renderLivePlayer();
 }
@@ -1656,11 +1757,13 @@ function renderLivePlayer(){
   else if(v.screen==="error")body=`<div class="card center" style="padding:44px">Couldn't find room <b>${esc(L.code)}</b>.<div style="margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="renderLiveEntry()">try again</button></div></div>`;
   else if(v.screen==="disconnected")body=`<div class="card center" style="padding:44px">Disconnected from the host.<div style="margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="renderLiveEntry()">rejoin</button></div></div>`;
   else if(v.screen==="lobby")body=`<div class="card center" style="padding:40px 22px"><div class="tag">you're in!</div>
-    <p style="margin:16px 0 4px;font-size:17px">Hi <b>${esc(L.name)}</b> — waiting for the host to start…</p>${liveScoresChips(v)}</div>`;
+    <p style="margin:16px 0 4px;font-size:17px">Hi <b>${esc(L.name)}</b> — waiting for the host to start…</p>${liveScoresChips(v)}
+    ${v.videoOn&&!V.stream&&((v.vparts||[]).length<5)?`<div style="margin-top:16px"><button class="btn btn-gold btn-sm" onclick="playerStartVideo()">🎥 turn on my camera</button><p class="muted" style="font-size:11.5px;margin-top:6px">video only — your mic stays off</p></div>`:""}</div>`;
   else if(v.screen==="roundIntro"){
     const r=L.game&&L.game.rounds[v.ri];
     body=`<div class="roundintro"><div class="num">Round ${v.ri+1}</div><h2 class="display">${esc(r?r.name:"")}</h2>
-    <div class="rule">${r?(r.rule||""):""}</div><p class="muted">get your buzzer finger ready…</p></div>`;
+    <div class="rule">${r?(r.rule||""):""}</div><p class="muted">get your buzzer finger ready…</p>
+    ${v.videoOn&&!V.stream&&((v.vparts||[]).length<5)?`<div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="playerStartVideo()">🎥 turn on my camera</button></div>`:""}</div>`;
   }
   else if(v.screen==="question"){
     const r=L.game&&L.game.rounds[v.ri],q=r&&r.questions[v.qi];
