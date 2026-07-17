@@ -179,6 +179,9 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .exportbox{width:100%;height:110px;font-family:ui-monospace,monospace;font-size:11px}
 .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;box-shadow:0 8px 30px rgba(120,20,15,.35);z-index:99;animation:pop .3s ease}
 
+.fab{position:fixed;bottom:22px;right:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-size:25px;box-shadow:0 10px 28px var(--glow);z-index:90;display:flex;align-items:center;justify-content:center;border:none}
+.fab:hover{transform:scale(1.06)}
+
 /* TMDB panel */
 .tmdb{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(30,15,15,.12);z-index:98;padding:20px;overflow-y:auto}
 .tmdb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
@@ -380,12 +383,23 @@ function toast(msg){
   const t=document.createElement("div");t.className="toast";t.textContent=msg;
   document.body.appendChild(t);setTimeout(()=>t.remove(),1800);
 }
-function speak(text){
+function pickRobotVoice(){
+  const vs=speechSynthesis.getVoices()||[];
+  return vs.find(v=>/zarvox/i.test(v.name))
+      || vs.find(v=>/trinoids|whisper|fred/i.test(v.name))
+      || vs.find(v=>/^en/i.test(v.lang)&&/male|david|daniel|alex/i.test(v.name))
+      || vs.find(v=>/^en/i.test(v.lang))
+      || vs[0]||null;
+}
+function speakQuote(){
   try{
-    const u=new SpeechSynthesisUtterance(text);
-    u.rate=.82;u.pitch=.4;
+    const q=S.game.rounds[S.ri].questions[S.qi];
+    if(!q||!q.quote)return;
+    const u=new SpeechSynthesisUtterance(q.quote);
+    u.rate=.8;u.pitch=.3;
+    const v=pickRobotVoice();if(v)u.voice=v;
     speechSynthesis.cancel();speechSynthesis.speak(u);
-  }catch(e){toast("Speech not supported here")}
+  }catch(e){toast("Speech not supported on this device")}
 }
 function shuffled(arr){
   const a=arr.slice();
@@ -496,11 +510,11 @@ function beginQuestion(){
   RT={start:Date.now(),attempts:2,cluesShown:1,hints:0,tiles:0,order:[],pool:null};
   if(r.type==="listReveal"){
     RT.interval=setInterval(()=>{
-      if(RT.cluesShown<q.clues.length){RT.cluesShown++;render();}
+      if(RT.cluesShown<q.clues.length){RT.cluesShown++;updateCluesOnly();}
       else clearInterval(RT.interval);
     },6000);
   }
-  if(r.type==="ordering"){ RT.pool=shuffled(q.items.map((it,i)=>i)); RT.order=[]; }
+  if(r.type==="ordering"){ RT.pool=shuffled(q.items.map((it,i)=>i)); RT.order=[null,null,null,null]; }
   if(r.type==="pieces"){
     RT.tiles=4;
     RT.tileOrder=piecesOrder();
@@ -548,35 +562,33 @@ function renderQuestion(head){
   const r=S.game.rounds[S.ri],q=r.questions[S.qi];
   let body="";
   if(r.type==="listReveal"){
-    const rows=q.clues.map((c,i)=> i<RT.cluesShown
-      ?`<div class="clue">${esc(c)}</div>`
-      :`<div class="clue hidden-clue">next clue soon…</div>`).join("");
-    body=qheadHTML()+`<div class="clues">${rows}</div>`+answerBarHTML();
+    body=qheadHTML()+`<div class="clues" id="cluelist">${cluesHTML(q)}</div>`+answerBarHTML();
   }
   else if(r.type==="quote"){
     body=qheadHTML()+`
       <div class="quotecard">
         <div class="q">${esc(q.quote)}</div>
-        <button class="speakbtn" onclick="speak(${JSON.stringify(esc(q.quote))})">🔊 hear it, Hawking-style</button>
+        <button class="speakbtn" onclick="speakQuote()">🔊 hear it, Hawking-style</button>
       </div>
       <div class="prompt" style="font-size:20px;margin-top:16px">${esc(q.ask||"Name the movie")}</div>`
       +answerBarHTML();
   }
   else if(r.type==="ordering"){
+    const dz=(i)=>`ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');dropSlot(${i})"`;
     const slots=[0,1,2,3].map(i=>{
       const it=RT.order[i];
-      return it===undefined
-        ?`<div class="slot"><span class="idx">${i+1}</span>tap a movie below</div>`
-        :`<div class="slot filled" onclick="unslot(${i})"><span class="idx">${i+1}</span>${esc(q.items[it].label)} <span class="muted" style="margin-left:auto;font-size:12px">tap to remove</span></div>`;
+      return it==null
+        ?`<div class="slot" ${dz(i)}><span class="idx">${i+1}</span>drag a movie here (or tap below)</div>`
+        :`<div class="slot filled" draggable="true" ondragstart="dragItem=${it}" ondragend="dragItem=null" onclick="unslot(${i})" ${dz(i)}><span class="idx">${i+1}</span>${esc(q.items[it].label)} <span class="muted" style="margin-left:auto;font-size:12px">drag · tap to remove</span></div>`;
     }).join("");
     const chips=RT.pool.map(i=>
-      `<button class="chip ${RT.order.includes(i)?"used":""}" onclick="slot(${i})">${esc(q.items[i].label)}</button>`).join("");
+      `<button class="chip ${RT.order.includes(i)?"used":""}" draggable="true" ondragstart="dragItem=${i}" ondragend="dragItem=null" onclick="slot(${i})">${esc(q.items[i].label)}</button>`).join("");
     body=qheadHTML()+`
       <div class="prompt" style="font-size:21px">${esc(q.prompt)}</div>
       <div class="slots">${slots}</div>
       <div class="pool">${chips}</div>
       <div style="margin-top:20px" class="center">
-        <button class="btn btn-gold" ${RT.order.length===4?"":"disabled"} onclick="submitOrder()">Lock it in</button>
+        <button class="btn btn-gold" ${RT.order.every(x=>x!=null)?"":"disabled"} onclick="submitOrder()">Lock it in</button>
       </div>`;
   }
   else if(r.type==="riddle"){
@@ -585,9 +597,9 @@ function renderQuestion(head){
   else if(r.type==="anagram"){
     body=qheadHTML()+`
       <div class="scramble">${esc(q.scramble)}</div>
-      <div class="mask">${anagramMask(q)}</div>
+      <div class="mask" id="mask">${anagramMask(q)}</div>
       <div class="center" style="margin-bottom:14px">
-        <button class="btn btn-ghost btn-sm" onclick="takeHint()" ${RT.hints>=3?"disabled":""}>💡 hint (−2 pts)</button>
+        <button class="btn btn-ghost btn-sm" id="hintbtn" onclick="takeHint()" ${RT.hints>=3?"disabled":""}>💡 hint (−2 pts)</button>
       </div>`+answerBarHTML("unscrambled title...");
   }
   else if(r.type==="math"){
@@ -632,6 +644,16 @@ function renderTilesOnly(){
   const t=$("tiles");if(t)t.innerHTML=tilesHTML();
   const p=$("pot");if(p)p.textContent=pot()+" pts";
 }
+function cluesHTML(q){
+  return q.clues.map((c,i)=> i<RT.cluesShown
+    ?`<div class="clue">${esc(c)}</div>`
+    :`<div class="clue hidden-clue">next clue soon…</div>`).join("");
+}
+function updateCluesOnly(){
+  const r=S.game.rounds[S.ri],q=r.questions[S.qi];
+  const l=$("cluelist");if(l)l.innerHTML=cluesHTML(q);
+  const p=$("pot");if(p)p.textContent=pot()+" pts";
+}
 function anagramMask(q){
   const ans=q.display||q.answers[0];
   if(!RT.maskOrder){
@@ -645,12 +667,29 @@ function anagramMask(q){
     return show.has(i)?esc(ch.toUpperCase()):"_";
   }).join(" ");
 }
-function takeHint(){ if(RT.hints<3){RT.hints++;render();} }
-function slot(i){
-  if(RT.order.includes(i)||RT.order.length>=4)return;
-  RT.order.push(i);render();
+function takeHint(){
+  if(RT.hints>=3)return;
+  RT.hints++;
+  const q=S.game.rounds[S.ri].questions[S.qi];
+  const m=$("mask");if(m)m.innerHTML=anagramMask(q);
+  const p=$("pot");if(p)p.textContent=pot()+" pts";
+  const b=$("hintbtn");if(b&&RT.hints>=3)b.disabled=true;
 }
-function unslot(pos){ RT.order.splice(pos,1);render(); }
+let dragItem=null;
+function slot(i){
+  if(RT.order.includes(i))return;
+  const e=RT.order.indexOf(null);if(e<0)return;
+  RT.order[e]=i;render();
+}
+function unslot(pos){ RT.order[pos]=null;render(); }
+function dropSlot(t){
+  if(dragItem==null)return;
+  const from=RT.order.indexOf(dragItem);
+  const prev=RT.order[t];
+  RT.order[t]=dragItem;
+  if(from>=0&&from!==t)RT.order[from]=prev==null?null:prev;
+  dragItem=null;render();
+}
 
 /* ---------- submissions ---------- */
 function speedBonus(){
@@ -720,7 +759,15 @@ function renderReveal(head){
   const res=S.results[S.ri][S.qi];
   let ansHTML="",extra="";
   if(r.type==="ordering"){
-    ansHTML=q.items.map((it,i)=>`<div class="clue" style="text-align:left"><b style="color:var(--gold)">${i+1}.</b> ${esc(it.label)} <span class="muted" style="float:right">${esc(it.note||"")}</span></div>`).join("");
+    ansHTML=q.items.map((it,i)=>{
+      const pick=RT&&RT.order?RT.order[i]:null;
+      const ok=pick===i;
+      return `<div class="clue" style="text-align:left;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+        <b style="color:var(--red)">${i+1}.</b>
+        <span><b>${esc(it.label)}</b> <span class="muted" style="font-size:12px">${esc(it.note||"")}</span></span>
+        <span style="margin-left:auto;font-size:13px;font-weight:600;color:${ok?"var(--good)":"var(--bad)"}">${ok?"✓":"✗"} you: ${pick!=null?esc(q.items[pick].label):"—"}</span>
+      </div>`;
+    }).join("");
     ansHTML=`<div class="clues" style="margin:14px 0">${ansHTML}</div>`;
   }else if(r.type==="math"){
     ansHTML=`<div class="ans" style="font-size:22px">${esc(q.parts[0].display)} ${esc(q.op)} ${esc(q.parts[1].display)} = ${esc(q.parts[2].display)}</div>
@@ -858,7 +905,7 @@ function renderAdmin(){
     <button class="addtile" onclick="adminNewFromS1E1()">+ From S1E1 template</button>
   </div>
   <div class="card"><h3 style="margin-bottom:8px">How sharing works (POC)</h3>
-  <p class="muted" style="font-size:13.5px;line-height:1.6">Games are auto-saved in this browser. <b>🔗 code</b> packs a game into a string friends paste under <b>Play a sent game</b>. Phase 2 turns these into real links with accounts, Tuesday/Thursday releases and leaderboards. <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="promptImport()">Import a code</button></p></div>`;
+  <p class="muted" style="font-size:13.5px;line-height:1.6">Games are auto-saved in this browser. <b>🔗 code</b> packs a game into a string friends paste under <b>Play a sent game</b>. Phase 2 turns these into real links with accounts, Tuesday/Thursday releases and leaderboards. <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="promptImport()">Import a code</button></p></div><button class="fab" onclick="tmdbPanel()" title="Movie research (TMDB)">🎬</button>`;
 }
 function adminFind(id){return DB.load().find(g=>g._id===id);}
 function adminEdit(id){C=adminFind(id);if(C)renderCreator();}
@@ -923,7 +970,7 @@ function renderCreator(){
       <button class="btn btn-ghost btn-sm" onclick="adminCode(C._id)">🔗 Copy share code</button>
       <button class="btn btn-ghost btn-sm" onclick="tmdbPanel()">🎬 Movie research</button>
     </div>
-  </div>`;
+  </div><button class="fab" onclick="tmdbPanel()" title="Movie research (TMDB)">🎬</button>`;
 }
 function dropRound(target){
   if(dragRi===null||dragRi===target)return;
@@ -976,7 +1023,7 @@ function renderRoundEditor(ri){
       <button class="btn btn-gold btn-sm" onclick="editQ(${ri},-1)">+ add question</button>
       <button class="btn btn-ghost btn-sm" onclick="tmdbPanel()">🎬 Movie research</button>
     </div>
-  </div>`;
+  </div><button class="fab" onclick="tmdbPanel()" title="Movie research (TMDB)">🎬</button>`;
 }
 function moveQ(ri,i,d){const qs=C.rounds[ri].questions,j=i+d;if(j<0||j>=qs.length)return;[qs[i],qs[j]]=[qs[j],qs[i]];persistC();renderRoundEditor(ri);}
 function dupQ(ri,qi){const qs=C.rounds[ri].questions;qs.splice(qi+1,0,JSON.parse(JSON.stringify(qs[qi])));persistC();renderRoundEditor(ri);toast("Question duplicated");}
@@ -1152,7 +1199,7 @@ function editQ(ri,qi){
       <button class="btn btn-gold" onclick="saveQ(${ri},${qi})">Save question</button>
       <button class="btn btn-ghost" onclick="renderRoundEditor(${ri})">Cancel</button>
     </div>
-  </div>`;
+  </div><button class="fab" onclick="tmdbPanel()" title="Movie research (TMDB)">🎬</button>`;
 }
 function f(label,kind,id,val){
   return `<div class="field"><label>${label}</label>${
@@ -1186,6 +1233,7 @@ function saveQ(ri,qi){
 
 /* ---------- boot ---------- */
 (function(){
+  try{speechSynthesis.getVoices();speechSynthesis.onvoiceschanged=function(){};}catch(e){}
   if(IMG.logo&&!IMG.logo.startsWith("__")){
     const l=document.createElement("link");l.rel="icon";l.href=IMG.logo;document.head.appendChild(l);
   }
