@@ -220,6 +220,8 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .vtile{width:min(260px,24vw);aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#000;position:relative;box-shadow:0 10px 30px rgba(0,0,0,.35);border:3px solid #fff}
 .vtile video{width:100%;height:100%;object-fit:cover;display:block}
 .vtile span{position:absolute;bottom:6px;left:10px;color:#fff;font-size:13px;font-weight:800;text-shadow:0 1px 4px rgba(0,0,0,.9)}
+.miclive{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:800;padding:11px 20px;border-radius:999px;z-index:96;box-shadow:0 8px 26px var(--glow);animation:micpulse 1.6s infinite;font-size:14px}
+@keyframes micpulse{0%,100%{opacity:1}50%{opacity:.7}}
 .audiobtn{background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:800;border-radius:999px;padding:12px 18px;font-size:14px;box-shadow:0 8px 24px var(--glow);align-self:center}
 @media(max-width:700px){#videostrip{max-width:100vw;left:0;right:0;top:0;padding:8px;justify-content:center;background:rgba(255,255,255,.65);backdrop-filter:blur(6px)}.vtile{width:44vw}}
 
@@ -1406,7 +1408,7 @@ function ensureAudioButton(){
   if(document.getElementById("audiobtn"))return;
   const b=document.createElement("button");
   b.id="audiobtn";b.className="audiobtn";
-  b.textContent="🔊 tap for host audio";
+  b.textContent="🔊 tap for audio";
   b.onclick=enableHostAudio;
   s.appendChild(b);
 }
@@ -1430,7 +1432,7 @@ function isHostPeer(id){return L&&L.role==="player"&&id===("finalcut-"+L.code.to
 function handleIncomingCall(call){
   try{call.answer(V.stream||undefined);}catch(e){}
   V.calls[call.peer]=call;
-  call.on("stream",rs=>addVideo(call.peer,rs,isHostPeer(call.peer)?"host":liveNameFor(call.peer),true,isHostPeer(call.peer)));
+  call.on("stream",rs=>addVideo(call.peer,rs,isHostPeer(call.peer)?"host":liveNameFor(call.peer),true,true));
   call.on("close",()=>removeVideo(call.peer));
 }
 function callParticipants(){
@@ -1450,7 +1452,7 @@ function callParticipants(){
       const call=L.peer.call(p.id,V.stream);
       if(!call)continue;
       V.calls[p.id]=call;
-      call.on("stream",rs=>addVideo(p.id,rs,p.name,true,false));
+      call.on("stream",rs=>addVideo(p.id,rs,p.name,true,true));
       call.on("close",()=>removeVideo(p.id));
     }catch(e){}
   }
@@ -1468,13 +1470,19 @@ async function hostStartVideo(){
 }
 async function playerStartVideo(){
   if(V.stream||!L||!L.conn)return;
-  try{
-    V.stream=await navigator.mediaDevices.getUserMedia({video:VID_CONSTRAINTS,audio:false});
-    addVideo("me",V.stream,"you",true);
-    callParticipants();
-    try{L.conn.send({t:"camon"});}catch(e){}
-    renderLivePlayer();
-  }catch(e){toast("Camera blocked — check browser permissions");}
+  let s=null;
+  try{s=await navigator.mediaDevices.getUserMedia({video:VID_CONSTRAINTS,audio:true});}
+  catch(e){
+    try{s=await navigator.mediaDevices.getUserMedia({video:VID_CONSTRAINTS,audio:false});}
+    catch(e2){toast("Camera blocked — check browser permissions");return;}
+  }
+  V.stream=s;
+  const at=s.getAudioTracks?s.getAudioTracks():[];
+  at.forEach(t=>{t.enabled=false;});
+  addVideo("me",s,"you",true);
+  callParticipants();
+  try{L.conn.send({t:"camon",mic:at.length>0});}catch(e){}
+  renderLivePlayer();
 }
 
 function renderLiveEntry(){
@@ -1559,7 +1567,7 @@ function hostMsg(conn,d){
   if(d.t==="camon"){
     if(!L.videoOn||!L.players[conn.peer])return;
     if((L.videoParts||[]).length>=5)return; // host + 4 max
-    if(!L.videoParts.find(p=>p.id===conn.peer))L.videoParts.push({id:conn.peer,name:(L.players[conn.peer]||{}).name||"player"});
+    if(!L.videoParts.find(p=>p.id===conn.peer))L.videoParts.push({id:conn.peer,name:(L.players[conn.peer]||{}).name||"player",mic:!!d.mic});
     if(V.stream)callParticipants();
     bcastView();renderLiveHost();
   }
@@ -1616,6 +1624,25 @@ function hostAdvance(){
   bcastView();renderLiveHost();
 }
 function toggleAuto(){L.auto=!L.auto;if(L.auto)startLiveTimers();else stopLiveTimers();renderLiveHost();}
+function toggleMic(id){
+  L.micOn=L.micOn||{};
+  const on=!L.micOn[id];
+  L.micOn[id]=on;
+  const c=L.conns[id];
+  if(c){try{c.send({t:"mic",on:on});}catch(e){}}
+  renderLiveHost();
+}
+function micRowHTML(){
+  if(!L.videoOn)return "";
+  const others=(L.videoParts||[]).filter(p=>p.id!==(L.peer&&L.peer.id));
+  if(!others.length)return "";
+  return `<div class="formactions" style="justify-content:center;margin-top:10px">`+others.map(p=>{
+    const on=!!(L.micOn&&L.micOn[p.id]);
+    return p.mic
+      ?`<button class="typechip ${on?"sel":""}" onclick="toggleMic('${p.id}')" title="${on?"mute":"unmute"} ${esc(p.name)}">🎙 ${esc(p.name)}${on?" · LIVE":""}</button>`
+      :`<span class="typechip" style="opacity:.45" title="no mic available">🎙 ${esc(p.name)} ✕</span>`;
+  }).join("")+`</div>`;
+}
 function hostAnswerText(r,q){
   if(r.type==="ordering")return q.items.map((it,i)=>(i+1)+". "+it.label).join("   ");
   if(r.type==="math")return q.parts.map(p=>p.display).join("  /  ");
@@ -1677,7 +1704,7 @@ function renderLiveHost(){
   window.scrollTo(0,0);setWide(false);
   const v=viewPayload().v;
   const buzzingName=L.lockedBy?((L.players[L.lockedBy]||{}).name):null;
-  const chips=liveScoresChips(v,buzzingName);
+  const chips=liveScoresChips(v,buzzingName)+micRowHTML();
   let body="";
   if(L.screen==="lobby"){
     const n=Object.keys(L.players).length;
@@ -1768,6 +1795,11 @@ function liveJoin(code,name){
 function playerMsg(d){
   if(!L||L.role!=="player"||!d)return;
   if(d.t==="welcome")L.game=d.game;
+  if(d.t==="mic"){
+    if(V.stream&&V.stream.getAudioTracks)V.stream.getAudioTracks().forEach(t=>{t.enabled=!!d.on;});
+    L.micLive=!!d.on;
+    if(d.on)toast("🎙 the host put you on air!");
+  }
   if(d.t==="view"){
     L.view=d.v;
     if(d.v.screen!=="question")L.buzzed=false;
@@ -1808,7 +1840,7 @@ function renderLivePlayer(){
   else if(v.screen==="disconnected")body=`<div class="card center" style="padding:44px">Disconnected from the host.<div style="margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="renderLiveEntry()">rejoin</button></div></div>`;
   else if(v.screen==="lobby")body=`<div class="card center" style="padding:40px 22px"><div class="tag">you're in!</div>
     <p style="margin:16px 0 4px;font-size:17px">Hi <b>${esc(L.name)}</b> — waiting for the host to start…</p>${liveScoresChips(v)}
-    ${v.videoOn&&!V.stream&&((v.vparts||[]).length<5)?`<div style="margin-top:16px"><button class="btn btn-gold btn-sm" onclick="playerStartVideo()">🎥 turn on my camera</button><p class="muted" style="font-size:11.5px;margin-top:6px">video only — your mic stays off</p></div>`:""}</div>`;
+    ${v.videoOn&&!V.stream&&((v.vparts||[]).length<5)?`<div style="margin-top:16px"><button class="btn btn-gold btn-sm" onclick="playerStartVideo()">🎥 turn on my camera</button><p class="muted" style="font-size:11.5px;margin-top:6px">you start muted — only the host can put your mic on air</p></div>`:""}</div>`;
   else if(v.screen==="roundIntro"){
     const r=L.game&&L.game.rounds[v.ri];
     body=`<div class="roundintro"><div class="num">Round ${v.ri+1}</div><h2 class="display">${esc(r?r.name:"")}</h2>
@@ -1855,7 +1887,8 @@ function renderLivePlayer(){
   }
   const prev=document.getElementById("panswer");
   const keep=prev?{v:prev.value,f:document.activeElement===prev}:null;
-  app().innerHTML=head+body;
+  const mb=L.micLive?`<div class="miclive">🎙 your mic is LIVE to the room</div>`:"";
+  app().innerHTML=head+mb+body;
   const ni=document.getElementById("panswer");
   if(ni&&keep){
     ni.value=keep.v;if(keep.f)ni.focus();
