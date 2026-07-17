@@ -183,13 +183,16 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .fab{position:fixed;bottom:22px;right:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-size:25px;box-shadow:0 10px 28px var(--glow);z-index:90;display:flex;align-items:center;justify-content:center;border:none}
 .fab:hover{transform:scale(1.06)}
 
-.palette{display:grid;grid-auto-flow:column;grid-auto-columns:172px;gap:10px;overflow-x:auto;padding:4px 2px 14px;scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch}
-.pcard{background:#fff;border:1px solid var(--line);border-radius:14px;padding:14px;cursor:grab;scroll-snap-align:start;box-shadow:0 4px 14px rgba(30,15,15,.05);transition:.15s transform,.15s border-color,.15s box-shadow;user-select:none}
-.pcard:hover{border-color:var(--red2);transform:translateY(-3px);box-shadow:0 10px 24px rgba(214,34,28,.13)}
+.wrap.wide{max-width:1100px}
+.creatorcols{display:grid;grid-template-columns:280px 1fr;gap:24px;align-items:start;margin-top:4px}
+@media(max-width:800px){.creatorcols{grid-template-columns:1fr}}
+.palette{display:grid;gap:8px;padding:2px}
+.pcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:grab;box-shadow:0 3px 10px rgba(30,15,15,.04);transition:.15s transform,.15s border-color,.15s box-shadow;user-select:none;display:flex;gap:11px;align-items:center;text-align:left}
+.pcard:hover{border-color:var(--red2);transform:translateX(3px);box-shadow:0 8px 20px rgba(214,34,28,.12)}
 .pcard:active{cursor:grabbing}
-.pcard .pico{font-size:22px;width:42px;height:42px;border-radius:11px;background:rgba(214,34,28,.08);display:flex;align-items:center;justify-content:center;margin-bottom:9px}
-.pcard b{font-size:13.5px;display:block;margin-bottom:3px}
-.pcard p{font-size:11.5px;color:var(--muted);line-height:1.45}
+.pcard .pico{font-size:19px;width:38px;height:38px;border-radius:10px;background:rgba(214,34,28,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pcard b{font-size:13.5px;display:block;margin-bottom:2px}
+.pcard p{font-size:11.5px;color:var(--muted);line-height:1.4}
 .dropslot{border:2px dashed #d5d1dc;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:132px;color:var(--muted);font-weight:600;font-size:14px;transition:.15s;background:none}
 .dropslot.dragover{border-color:var(--red);box-shadow:0 0 0 3px var(--glow)}
 .dropslot span{font-size:20px;color:var(--red2)}
@@ -408,6 +411,7 @@ function isMatch(guess,answers){
 /* ---------- tiny helpers ---------- */
 const $=id=>document.getElementById(id);
 const app=()=>$("app");
+function setWide(on){const a=app();if(a)a.classList.toggle("wide",!!on);}
 function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
 function toast(msg){
   const t=document.createElement("div");t.className="toast";t.textContent=msg;
@@ -458,7 +462,7 @@ function doneQs(){let n=0;for(let i=0;i<S.ri;i++)n+=S.game.rounds[i].questions.l
 
 /* ---------- render root ---------- */
 function render(){
-  window.scrollTo(0,0);
+  window.scrollTo(0,0);setWide(false);
   if(!S){renderHome();return;}
   const g=S.game;
   const head=`
@@ -913,7 +917,7 @@ function persistC(){
 }
 function openCreator(){renderAdmin();}
 function renderAdmin(){
-  window.scrollTo(0,0);C=null;
+  window.scrollTo(0,0);setWide(false);C=null;
   const games=DB.load().sort((a,b)=>(b._updated||0)-(a._updated||0));
   const tiles=games.map(g=>{
     const qn=g.rounds.reduce((s,r)=>s+r.questions.length,0);
@@ -961,14 +965,14 @@ function adminNewFromS1E1(){C=JSON.parse(JSON.stringify(GAME_S1E1));C.title="my 
 
 /* ---- game editor: round tiles with drag reorder ---- */
 function renderCreator(){
-  window.scrollTo(0,0);persistC();
+  window.scrollTo(0,0);setWide(true);persistC();
   const palette=Object.keys(TYPE_META).map(t=>`
     <div class="pcard" draggable="true"
       ondragstart="dragType='${t}'" ondragend="dragType=null"
       onclick="paletteAdd('${t}')" title="drag into your lineup — or tap to add">
       <div class="pico">${TYPE_META[t].icon}</div>
-      <b>${TYPE_META[t].label}</b>
-      <p>${TYPE_META[t].hint}</p>
+      <div><b>${TYPE_META[t].label}</b>
+      <p>${TYPE_META[t].hint}</p></div>
     </div>`).join("");
   const tiles=C.rounds.map((r,ri)=>`
     <div class="rtile" draggable="true" onclick="renderRoundEditor(${ri})"
@@ -1001,18 +1005,24 @@ function renderCreator(){
     <div class="field"><label>Game title</label><input type="text" value="${esc(C.title)}" onchange="C.title=this.value;persistC();renderCreator()"></div>
     <div class="field" style="margin-bottom:0"><label>Host / author</label><input type="text" value="${esc(C.author)}" onchange="C.author=this.value;persistC()" placeholder="you"></div>
   </div>
-  <h3 style="margin:2px 2px 6px">Round types</h3>
-  <p class="muted" style="font-size:13px;margin:0 2px 10px">Drag one into your lineup — or tap to add. Drop a type onto an existing round to transform it.</p>
-  <div class="palette">${palette}</div>
-  <h3 style="margin:18px 2px 6px">Your lineup ${C.rounds.length?`<span class="muted" style="font-size:13px;font-weight:400">· ${C.rounds.length} round${C.rounds.length===1?"":"s"}</span>`:""}</h3>
-  <p class="muted" style="font-size:13px;margin:0 2px 10px">Plays top to bottom — drag tiles to reorder.</p>
-  <div class="grid2">
-    ${tiles}
-    <div class="dropslot"
-      ondragover="event.preventDefault();this.classList.add('dragover')"
-      ondragleave="this.classList.remove('dragover')"
-      ondrop="event.preventDefault();this.classList.remove('dragover');slotDrop()">
-      <span>＋</span> drop a round type here
+  <div class="creatorcols">
+    <div>
+      <h3 style="margin:2px 2px 6px">Round types</h3>
+      <p class="muted" style="font-size:13px;margin:0 2px 10px">Drag into your lineup — or tap to add. Drop onto an existing round to transform it.</p>
+      <div class="palette">${palette}</div>
+    </div>
+    <div>
+      <h3 style="margin:2px 2px 6px">Your lineup ${C.rounds.length?`<span class="muted" style="font-size:13px;font-weight:400">· ${C.rounds.length} round${C.rounds.length===1?"":"s"}</span>`:""}</h3>
+      <p class="muted" style="font-size:13px;margin:0 2px 10px">Plays top to bottom — drag tiles to reorder.</p>
+      <div class="grid2">
+        ${tiles}
+        <div class="dropslot"
+          ondragover="event.preventDefault();this.classList.add('dragover')"
+          ondragleave="this.classList.remove('dragover')"
+          ondrop="event.preventDefault();this.classList.remove('dragover');slotDrop()">
+          <span>＋</span> drop a round type here
+        </div>
+      </div>
     </div>
   </div>
   <div class="card" style="margin-top:16px">
@@ -1057,7 +1067,7 @@ function moveRound(i,d){const j=i+d;if(j<0||j>=C.rounds.length)return;[C.rounds[
 
 /* ---- round editor ---- */
 function renderRoundEditor(ri){
-  window.scrollTo(0,0);persistC();
+  window.scrollTo(0,0);setWide(false);persistC();
   const r=C.rounds[ri];
   app().innerHTML=`
   <div class="topbar">
@@ -1239,6 +1249,7 @@ function tmdbCopy(){
 
 /* --- question editor (simple per-type forms) --- */
 function editQ(ri,qi){
+  setWide(false);
   const r=C.rounds[ri];
   const q=qi>=0?r.questions[qi]:null;
   const t=r.type;
@@ -1346,7 +1357,7 @@ let L=null;
 function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
 function liveLeave(){try{stopLiveTimers();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
 function renderLiveEntry(){
-  window.scrollTo(0,0);liveLeave();
+  window.scrollTo(0,0);setWide(false);liveLeave();
   const games=DB.load();
   app().innerHTML=`
   <div class="topbar"><div class="brand" onclick="S=null;render()">Final Cut</div>
@@ -1525,7 +1536,7 @@ function liveRevealHTML(d){
 }
 function renderLiveHost(){
   if(!L||L.role!=="host")return;
-  window.scrollTo(0,0);
+  window.scrollTo(0,0);setWide(false);
   const v=viewPayload().v;
   const buzzingName=L.lockedBy?((L.players[L.lockedBy]||{}).name):null;
   const chips=liveScoresChips(v,buzzingName);
@@ -1637,6 +1648,7 @@ function buzz(){
 }
 function renderLivePlayer(){
   if(!L||L.role!=="player")return;
+  setWide(false);
   const v=L.view||{};
   const head=`<div class="topbar"><div class="brand">Final Cut · Live</div><span class="tag">room ${esc(L.code)}</span></div>`;
   let body="";
