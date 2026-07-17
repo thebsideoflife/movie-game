@@ -1187,9 +1187,25 @@ async function tmdbDetail(id){
       <div class="formactions">
         <button class="btn btn-ghost btn-sm" onclick="tmdbSearch()">← results</button>
         <button class="btn btn-ghost btn-sm" onclick="tmdbCopy()">copy facts</button>
+        ${m.poster_path?`<button class="btn btn-gold btn-sm" onclick="tmdbUsePoster('https://image.tmdb.org/t/p/w500${m.poster_path}')">🖼 Use this poster</button>`:""}
       </div>
       <textarea id="tmdbfacts" style="position:absolute;left:-9999px">${esc(m.title)} (${(m.release_date||"").slice(0,4)})\ndirector: ${esc(dir?dir.name:"")}\nrating: ${m.vote_average?m.vote_average.toFixed(1):""}\ngenres: ${(m.genres||[]).map(g=>g.name).join(", ")}\ncast: ${cast.join(", ")}\nbox office: ${m.revenue||""}</textarea>`;
   }catch(e){res.innerHTML='<p class="muted">Error loading details.</p>';}
+}
+function tmdbUsePoster(url){
+  const targets=["f_img","f_ai","f_bi"];
+  for(const id of targets){
+    const e=document.getElementById(id);
+    if(e&&!e.value.trim()){
+      e.value=url;
+      e.style.borderColor="var(--good)";
+      toast("🖼 Poster dropped into the question");
+      return;
+    }
+  }
+  (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject())
+    .then(()=>toast("Poster URL copied — open a Poster pieces or Twin films question and paste it into the image field"))
+    .catch(()=>{prompt("Copy this poster URL:",url);});
 }
 function tmdbCopy(){
   const t=document.getElementById("tmdbfacts");if(!t)return;
@@ -1246,14 +1262,14 @@ function editQ(ri,qi){
     ${f("Prompt (e.g. 1998: devastating asteroids)","in","f_prompt",v(q&&q.prompt))}
     ${f("Movie A — accepted answers (comma sep)","in","f_aa",q?q.a.answers.join(", "):"")}
     ${f("Movie A — display","in","f_ad",v(q&&q.a.display))}
-    ${f("Movie A — poster image URL (optional)","in","f_ai",v(q&&q.a.img&&!IMG[q.a.img]?q.a.img:""))}
+    ${f("Movie A — poster URL (optional, 🎬 research → 🖼 Use this poster)","in","f_ai",v(q&&q.a.img&&!IMG[q.a.img]?q.a.img:""))}
     ${f("Movie B — accepted answers","in","f_ba",q?q.b.answers.join(", "):"")}
     ${f("Movie B — display","in","f_bd",v(q&&q.b.display))}
-    ${f("Movie B — poster image URL (optional)","in","f_bi",v(q&&q.b.img&&!IMG[q.b.img]?q.b.img:""))}
+    ${f("Movie B — poster URL (optional, 🎬 research → 🖼 Use this poster)","in","f_bi",v(q&&q.b.img&&!IMG[q.b.img]?q.b.img:""))}
     ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}`;
   }else if(t==="pieces"){
     fields=`
-    ${f("Poster / still image URL","in","f_img",v(q&&q.img&&!IMG[q.img]?q.img:""))}
+    ${f("Poster image — paste a URL, or use 🎬 research → 🖼 Use this poster","in","f_img",v(q&&q.img&&!IMG[q.img]?q.img:""))}
     ${f("Accepted answers — comma separated","in","f_answers",(q?q.answers.join(", "):""))}
     ${f("Display answer","in","f_display",v(q&&q.display))}
     ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}`;
