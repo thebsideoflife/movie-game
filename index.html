@@ -205,6 +205,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 /* live rooms */
 .buzzbtn{width:min(230px,64vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--red2),var(--red) 70%);color:#fff;font-family:'Anton',Impact,sans-serif;font-size:36px;letter-spacing:.06em;box-shadow:0 14px 40px var(--glow),inset 0 -8px 22px rgba(0,0,0,.25);border:6px solid #fff}
 .buzzbtn:active{transform:scale(.93)}
+.buzzbtn[disabled]{opacity:.35;filter:grayscale(.5);pointer-events:none}
 .buzzmsg{font-weight:800;font-size:20px;padding:26px;border-radius:16px;background:#fff;border:1px solid var(--line);display:inline-block}
 .buzzmsg.you{color:var(--good);border-color:var(--good)}
 .buzzmsg.out{color:var(--muted)}
@@ -1513,7 +1514,13 @@ function hostMsg(conn,d){
   }
   if(d.t==="buzz"){
     if(L.screen!=="question"||L.lockedBy||L.buzzedOut.includes(conn.peer)||!L.players[conn.peer])return;
-    L.lockedBy=conn.peer;stopLiveTimers();bcastView();renderLiveHost();
+    L.lockedBy=conn.peer;stopLiveTimers();
+    if(d.text){
+      const q=L.game.rounds[L.ri].questions[L.qi];
+      const text=String(d.text).slice(0,120);
+      L.typedAnswer={name:(L.players[conn.peer]||{}).name||"?",text,ok:(q&&q.answers&&q.answers.length)?isMatch(text,q.answers):null};
+    }
+    bcastView();renderLiveHost();
   }
   if(d.t==="camon"){
     if(!L.videoOn||!L.players[conn.peer])return;
@@ -1743,8 +1750,16 @@ function sendAnswer(){
 }
 function buzz(){
   if(!L||L.buzzed||!L.conn)return;
+  const v=L.view||{};
+  let text=null;
+  if(v.answerMode==="typed"){
+    const e=document.getElementById("panswer");
+    text=e?e.value.trim():"";
+    if(!text)return;
+    L.sentAnswer=true;
+  }
   L.buzzed=true;
-  try{L.conn.send({t:"buzz"});}catch(e){}
+  try{L.conn.send(text?{t:"buzz",text:text}:{t:"buzz"});}catch(e){}
   renderLivePlayer();
 }
 function renderLivePlayer(){
@@ -1782,6 +1797,14 @@ function renderLivePlayer(){
     }
     else if(v.lockedBy)buzzArea=`<div class="buzzmsg">🔔 ${esc(v.lockedBy)} buzzed…${v.typed?`<br><span class="muted" style="font-size:14px">“${esc(v.typed.text)}”</span>`:""}</div>`;
     else if(out)buzzArea=`<div class="buzzmsg out">locked out of this one 😬</div>`;
+    else if(v.answerMode==="typed")buzzArea=`
+      <div class="answerbar" style="max-width:420px;margin:0 auto 16px">
+        <input type="text" id="panswer" placeholder="type your answer first…" autocomplete="off"
+          oninput="const b=document.getElementById('buzzbtn');if(b)b.disabled=!this.value.trim()"
+          onkeydown="if(event.key==='Enter')buzz()">
+      </div>
+      <button class="buzzbtn" id="buzzbtn" disabled onclick="buzz()">BUZZ</button>
+      <p class="muted" style="font-size:12px;margin-top:10px">type your answer to unlock the buzzer — first buzz wins</p>`;
     else buzzArea=`<button class="buzzbtn" onclick="buzz()">BUZZ</button>`;
     body=`<div class="qhead"><span class="qnum">R${v.ri+1} · Q${v.qi+1}</span><span class="potbadge">${v.pot} pts</span></div>
       ${q?liveQHTML(r,q,v):""}
@@ -1799,7 +1822,11 @@ function renderLivePlayer(){
   const keep=prev?{v:prev.value,f:document.activeElement===prev}:null;
   app().innerHTML=head+body;
   const ni=document.getElementById("panswer");
-  if(ni&&keep){ni.value=keep.v;if(keep.f)ni.focus();}
+  if(ni&&keep){
+    ni.value=keep.v;if(keep.f)ni.focus();
+    const b=document.getElementById("buzzbtn");
+    if(b)b.disabled=!ni.value.trim();
+  }
 }
 
 /* ---------- boot ---------- */
