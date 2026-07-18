@@ -437,15 +437,25 @@ function pickRobotVoice(){
       || vs.find(v=>/^en/i.test(v.lang))
       || vs[0]||null;
 }
-function speakQuote(){
+function speakText(text){
   try{
-    const q=S.game.rounds[S.ri].questions[S.qi];
-    if(!q||!q.quote)return;
-    const u=new SpeechSynthesisUtterance(q.quote);
+    const u=new SpeechSynthesisUtterance(text);
     u.rate=.8;u.pitch=.3;
     const v=pickRobotVoice();if(v)u.voice=v;
     speechSynthesis.cancel();speechSynthesis.speak(u);
   }catch(e){toast("Speech not supported on this device")}
+}
+function speakQuote(){
+  const q=S&&S.game.rounds[S.ri].questions[S.qi];
+  if(q&&q.quote)speakText(q.quote);
+}
+function liveSpeakQuote(){
+  try{
+    let q=null;
+    if(L&&L.role==="host")q=L.game.rounds[L.ri].questions[L.qi];
+    else if(L&&L.game&&L.view)q=(L.game.rounds[L.view.ri]||{questions:[]}).questions[L.view.qi];
+    if(q&&q.quote)speakText(q.quote);
+  }catch(e){}
 }
 function shuffled(arr){
   const a=arr.slice();
@@ -565,6 +575,7 @@ function beginQuestion(){
     },6000);
   }
   if(r.type==="ordering"){ RT.pool=shuffled(q.items.map((it,i)=>i)); RT.order=[null,null,null,null]; }
+  if(r.type==="quote")setTimeout(()=>{try{speakQuote()}catch(e){}},450);
   if(r.type==="pieces"){
     RT.tiles=4;
     RT.tileOrder=piecesOrder();
@@ -616,9 +627,10 @@ function renderQuestion(head){
   }
   else if(r.type==="quote"){
     body=qheadHTML()+`
-      <div class="quotecard">
-        <div class="q">${esc(q.quote)}</div>
-        <button class="speakbtn" onclick="speakQuote()">🔊 hear it, Hawking-style</button>
+      <div class="quotecard center">
+        <p class="muted" style="font-size:14px;margin-bottom:14px">🤖 audio-only — the robot reads the quote, no peeking at words</p>
+        <button class="btn btn-gold" onclick="speakQuote()">🔊 Play the quote</button>
+        <button class="speakbtn" style="margin-left:8px" onclick="speakQuote()">↻ replay</button>
       </div>
       <div class="prompt" style="font-size:20px;margin-top:16px">${esc(q.ask||"Name the movie")}</div>`
       +answerBarHTML();
@@ -829,7 +841,8 @@ function renderReveal(head){
     ansHTML=`<div class="piecebox" style="max-width:300px"><img src="${imgSrc(q.img)}" alt=""></div>
     <div class="ans">${esc(q.display)}</div>`;
   }else{
-    ansHTML=`<div class="ans">${esc(q.display||q.answers[0])}</div>`;
+    const qt=r.type==="quote"&&q.quote?`<p style="font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:18px;margin-bottom:8px">“${esc(q.quote)}”</p>`:"";
+    ansHTML=qt+`<div class="ans">${esc(q.display||q.answers[0])}</div>`;
   }
   const isLastQ=S.qi>=r.questions.length-1;
   app().innerHTML=head+`
@@ -1365,7 +1378,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="20";
+const FC_BUILD="21";
 let L=null;
 function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
 function liveLeave(){try{stopLiveTimers();destroyVideo();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
@@ -1689,6 +1702,7 @@ function micRowHTML(){
   }).join("")+`</div>`;
 }
 function hostAnswerText(r,q){
+  if(r.type==="quote")return (q.display||(q.answers&&q.answers[0])||"—")+"  ·  “"+q.quote+"”";
   if(r.type==="ordering")return q.items.map((it,i)=>(i+1)+". "+it.label).join("   ");
   if(r.type==="math")return q.parts.map(p=>p.display).join("  /  ");
   if(r.type==="twins")return q.a.display+" + "+q.b.display;
@@ -1705,6 +1719,7 @@ function liveRevealData(){
   if(r.type==="math")return {kind:"text",text:q.parts[0].display+" "+(q.op||"+")+" "+q.parts[1].display+" = "+q.parts[2].display,fact:q.fact};
   if(r.type==="twins")return {kind:"twins",a:q.a.display,b:q.b.display,ai:q.a.img,bi:q.b.img,fact:q.fact};
   if(r.type==="pieces")return {kind:"pieces",img:q.img,display:q.display,fact:q.fact};
+  if(r.type==="quote")return {kind:"quote",quote:q.quote,text:q.display||(q.answers&&q.answers[0])||"",fact:q.fact};
   return {kind:"text",text:q.display||(q.answers&&q.answers[0])||"",fact:q.fact};
 }
 function liveReveal(){L.revealData=liveRevealData();L.screen="reveal";L.lockedBy=null;stopLiveTimers();bcastView();renderLiveHost();}
@@ -1722,7 +1737,7 @@ function liveScoresChips(v,buzzingName){
 }
 function liveQHTML(r,q,v){
   if(r.type==="listReveal")return `<div class="clues">${q.clues.map((c,i)=>i<v.cluesShown?`<div class="clue">${esc(c)}</div>`:`<div class="clue hidden-clue">next clue soon…</div>`).join("")}</div>`;
-  if(r.type==="quote")return `<div class="quotecard"><div class="q">${esc(q.quote)}</div></div><div class="prompt" style="font-size:20px;margin-top:14px">${esc(q.ask||"Name the movie")}</div>`;
+  if(r.type==="quote")return `<div class="quotecard center"><p class="muted" style="font-size:14px;margin-bottom:12px">🤖 audio-only quote — listen closely</p><button class="btn btn-gold btn-sm" onclick="liveSpeakQuote()">🔊 Play the quote</button></div><div class="prompt" style="font-size:20px;margin-top:14px">${esc(q.ask||"Name the movie")}</div>`;
   if(r.type==="ordering")return `<div class="prompt" style="font-size:21px">${esc(q.prompt)}</div><div class="pool">${(v.shuffled&&v.shuffled.length?v.shuffled:q.items.map((x,i)=>i)).map(i=>`<span class="chip">${esc(q.items[i].label)}</span>`).join("")}</div><p class="muted" style="margin-top:12px;font-size:13px">buzz in, then say the full order out loud</p>`;
   if(r.type==="riddle")return `<div class="prompt">"${esc(q.prompt)}"</div>`;
   if(r.type==="anagram")return `<div class="scramble">${esc(q.scramble)}</div>`;
@@ -1741,6 +1756,7 @@ function liveRevealHTML(d){
   if(d.kind==="list")inner=`<div class="clues" style="margin:12px 0">${d.items.map(x=>`<div class="clue" style="text-align:left">${esc(x)}</div>`).join("")}</div>`;
   else if(d.kind==="twins")inner=`<div class="posters">${d.ai?`<img src="${imgSrc(d.ai)}" alt="">`:""}${d.bi?`<img src="${imgSrc(d.bi)}" alt="">`:""}</div><div class="ans" style="font-size:24px">${esc(d.a)} + ${esc(d.b)}</div>`;
   else if(d.kind==="pieces")inner=`<div class="piecebox" style="max-width:280px"><img src="${imgSrc(d.img)}" alt=""></div><div class="ans">${esc(d.display)}</div>`;
+  else if(d.kind==="quote")inner=`<p style="font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:18px;margin-bottom:8px">“${esc(d.quote)}”</p><div class="ans">${esc(d.text)}</div>`;
   else inner=`<div class="ans">${esc(d.text)}</div>`;
   return inner+(d.fact?`<div class="fact">🎬 ${d.fact}</div>`:"");
 }
