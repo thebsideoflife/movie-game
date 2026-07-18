@@ -222,6 +222,8 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .vtile span{position:absolute;bottom:6px;left:10px;color:#fff;font-size:13px;font-weight:800;text-shadow:0 1px 4px rgba(0,0,0,.9)}
 .miclive{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:800;padding:11px 20px;border-radius:999px;z-index:96;box-shadow:0 8px 26px var(--glow);animation:micpulse 1.6s infinite;font-size:14px}
 @keyframes micpulse{0%,100%{opacity:1}50%{opacity:.7}}
+.vmic{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.55);color:#fff;border-radius:999px;padding:6px 11px;font-size:11.5px;font-weight:800;border:1px solid rgba(255,255,255,.45);cursor:pointer;z-index:2}
+.vmic.on{background:linear-gradient(180deg,var(--red2),var(--red));border-color:#fff;animation:micpulse 1.6s infinite}
 .audiobtn{background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:800;border-radius:999px;padding:12px 18px;font-size:14px;box-shadow:0 8px 24px var(--glow);align-self:center}
 @media(max-width:700px){#videostrip{max-width:100vw;left:0;right:0;top:0;padding:8px;justify-content:center;background:rgba(255,255,255,.65);backdrop-filter:blur(6px)}.vtile{width:44vw}}
 
@@ -1363,7 +1365,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="19";
+const FC_BUILD="20";
 let L=null;
 function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
 function liveLeave(){try{stopLiveTimers();destroyVideo();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
@@ -1392,6 +1394,22 @@ function addVideo(id,stream,label,muted,wantsAudio){
     if(V.audioEnabled){vid.muted=false;if(vid.play){const p2=vid.play();if(p2&&p2.catch)p2.catch(()=>{});}}
     else ensureAudioButton();
   }
+  if(L&&L.role==="host"&&id!=="me"){
+    if(!t.querySelector(".vmic")){
+      const btn=document.createElement("button");
+      btn.className="vmic";
+      btn.onclick=function(ev){ev.stopPropagation();toggleMic(id);};
+      t.appendChild(btn);
+    }
+    updateVmicBtn(id);
+  }
+}
+function updateVmicBtn(id){
+  const t=V.els[id];if(!t)return;
+  const btn=t.querySelector(".vmic");if(!btn)return;
+  const on=!!(L&&L.micOn&&L.micOn[id]);
+  btn.textContent=on?"🎙 LIVE":"🔇 muted";
+  btn.classList.toggle("on",on);
 }
 function removeVideo(id){
   const t=V.els[id];if(t){t.remove();delete V.els[id];}
@@ -1435,7 +1453,7 @@ function handleIncomingCall(call){
   try{call.answer(V.stream||undefined);}catch(e){}
   V.calls[call.peer]=call;
   call.on("stream",rs=>addVideo(call.peer,rs,isHostPeer(call.peer)?"host":liveNameFor(call.peer),true,true));
-  call.on("close",()=>removeVideo(call.peer));
+  call.on("close",()=>{if(V.calls[call.peer]===call)removeVideo(call.peer);});
 }
 function callParticipants(){
   if(!V.stream||!L||!L.peer)return;
@@ -1455,7 +1473,7 @@ function callParticipants(){
       if(!call)continue;
       V.calls[p.id]=call;
       call.on("stream",rs=>addVideo(p.id,rs,p.name,true,true));
-      call.on("close",()=>removeVideo(p.id));
+      call.on("close",()=>{if(V.calls[p.id]===call)removeVideo(p.id);});
     }catch(e){}
   }
 }
@@ -1485,6 +1503,23 @@ async function playerStartVideo(){
   callParticipants();
   try{L.conn.send({t:"camon",mic:at.length>0});}catch(e){}
   renderLivePlayer();
+}
+
+function recallAll(){
+  if(!L||L.role!=="player"||!V.stream)return;
+  Object.keys(V.calls).forEach(id=>{const c=V.calls[id];delete V.calls[id];try{c.close()}catch(e){}});
+  const hostId="finalcut-"+L.code.toLowerCase();
+  const vp=(L.view&&L.view.vparts)||[];
+  const targets=[{id:hostId,name:"host"}].concat(vp.filter(p=>p.id!==L.myId&&p.id!==hostId));
+  targets.forEach(p=>{
+    try{
+      const call=L.peer.call(p.id,V.stream);
+      if(!call)return;
+      V.calls[p.id]=call;
+      call.on("stream",rs=>addVideo(p.id,rs,p.name,true,true));
+      call.on("close",()=>{if(V.calls[p.id]===call)removeVideo(p.id);});
+    }catch(e){}
+  });
 }
 
 function renderLiveEntry(){
@@ -1572,6 +1607,7 @@ function hostMsg(conn,d){
     if((L.videoParts||[]).length>=5)return; // host + 4 max
     if(!L.videoParts.find(p=>p.id===conn.peer))L.videoParts.push({id:conn.peer,name:(L.players[conn.peer]||{}).name||"player",mic:!!d.mic});
     if(V.stream)callParticipants();
+    if(L.micOn&&L.micOn[conn.peer]){try{conn.send({t:"mic",on:true});}catch(e){}}
     bcastView();renderLiveHost();
   }
   if(d.t==="micack"){
@@ -1639,6 +1675,7 @@ function toggleMic(id){
   const c=L.conns[id];
   if(c){try{c.send({t:"mic",on:on});}catch(e){}}
   renderLiveHost();
+  updateVmicBtn(id);
 }
 function micRowHTML(){
   if(!L.videoOn)return "";
@@ -1807,6 +1844,7 @@ function playerMsg(d){
     const has=V.stream&&V.stream.getAudioTracks&&V.stream.getAudioTracks().length>0;
     if(has)V.stream.getAudioTracks().forEach(t=>{t.enabled=!!d.on;});
     L.micLive=!!d.on&&has;
+    if(d.on&&has)recallAll(); // fresh offers carrying live audio — most reliable path
     try{L.conn.send({t:"micack",on:!!d.on,has:!!has});}catch(e){}
     if(d.on&&has)toast("🎙 the host put you on air!");
   }
