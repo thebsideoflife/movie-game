@@ -108,6 +108,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .chip{background:#fff;border:1px solid var(--line);color:var(--text);border-radius:999px;padding:11px 18px;font-size:15px;font-weight:600;box-shadow:0 2px 8px rgba(30,15,15,.05)}
 .chip:hover{border-color:var(--red2)}
 .chip.used{opacity:.25;pointer-events:none}
+.oghost{position:fixed;z-index:999;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.25);background:#fff;border:1.5px solid var(--red2)}
 
 /* anagram */
 .scramble{font-family:'Anton',Impact,sans-serif;font-size:clamp(30px,8.5vw,46px);text-align:center;color:var(--red);letter-spacing:.05em;margin:10px 0 22px;text-transform:uppercase}
@@ -636,15 +637,14 @@ function renderQuestion(head){
       +answerBarHTML();
   }
   else if(r.type==="ordering"){
-    const dz=(i)=>`ondragover="event.preventDefault();this.classList.add('dragover')" ondragleave="this.classList.remove('dragover')" ondrop="event.preventDefault();this.classList.remove('dragover');dropSlot(${i})"`;
     const slots=[0,1,2,3].map(i=>{
       const it=RT.order[i];
       return it==null
-        ?`<div class="slot" ${dz(i)}><span class="idx">${i+1}</span>drag a movie here (or tap below)</div>`
-        :`<div class="slot filled" draggable="true" ondragstart="dragItem=${it}" ondragend="dragItem=null" onclick="unslot(${i})" ${dz(i)}><span class="idx">${i+1}</span>${esc(q.items[it].label)} <span class="muted" style="margin-left:auto;font-size:12px">drag · tap to remove</span></div>`;
+        ?`<div class="slot" data-slotidx="${i}"><span class="idx">${i+1}</span>drag a movie here (or tap below)</div>`
+        :`<div class="slot filled" data-slotidx="${i}" data-oitem="${it}" data-oslot="${i}"><span class="idx">${i+1}</span>${esc(q.items[it].label)} <span class="muted" style="margin-left:auto;font-size:12px">drag · tap to remove</span></div>`;
     }).join("");
     const chips=RT.pool.map(i=>
-      `<button class="chip ${RT.order.includes(i)?"used":""}" draggable="true" ondragstart="dragItem=${i}" ondragend="dragItem=null" onclick="slot(${i})">${esc(q.items[i].label)}</button>`).join("");
+      `<button type="button" class="chip ${RT.order.includes(i)?"used":""}" data-oitem="${i}">${esc(q.items[i].label)}</button>`).join("");
     body=qheadHTML()+`
       <div class="prompt" style="font-size:21px">${esc(q.prompt)}</div>
       <div class="slots">${slots}</div>
@@ -694,7 +694,57 @@ function renderQuestion(head){
       </div>`+answerBarHTML("name the movie...");
   }
   app().innerHTML=head+body;
+  if(r.type==="ordering")initOrderDnD();
   const g=$("guess");if(g)g.focus();
+}
+let ODrag=null;
+function initOrderDnD(){
+  document.querySelectorAll("[data-oitem]").forEach(el=>{
+    el.style.touchAction="none";
+    el.onpointerdown=e=>{
+      if(el.classList.contains("used"))return;
+      ODrag={item:parseInt(el.getAttribute("data-oitem")),
+        fromSlot:el.hasAttribute("data-oslot")?parseInt(el.getAttribute("data-oslot")):null,
+        x0:e.clientX,y0:e.clientY,moved:false,ghost:null,el:el};
+      try{el.setPointerCapture&&el.setPointerCapture(e.pointerId);}catch(err){}
+    };
+    el.onpointermove=e=>{
+      if(!ODrag||ODrag.el!==el)return;
+      const dx=e.clientX-ODrag.x0,dy=e.clientY-ODrag.y0;
+      if(!ODrag.moved&&Math.hypot(dx,dy)>8){
+        ODrag.moved=true;
+        const g=document.createElement("div");
+        g.className="chip oghost";g.textContent=el.textContent.replace("drag · tap to remove","").trim();
+        document.body.appendChild(g);ODrag.ghost=g;
+        el.style.opacity=".35";
+      }
+      if(ODrag.moved&&ODrag.ghost){
+        ODrag.ghost.style.left=(e.clientX-50)+"px";
+        ODrag.ghost.style.top=(e.clientY-26)+"px";
+        document.querySelectorAll(".slot").forEach(s=>s.classList.remove("dragover"));
+        const t=document.elementFromPoint(e.clientX,e.clientY);
+        const sl=t&&t.closest?t.closest("[data-slotidx]"):null;
+        if(sl)sl.classList.add("dragover");
+      }
+    };
+    el.onpointerup=e=>{
+      if(!ODrag||ODrag.el!==el)return;
+      const d=ODrag;ODrag=null;
+      if(d.ghost)d.ghost.remove();
+      el.style.opacity="";
+      if(!d.moved){
+        if(d.fromSlot!=null)unslot(d.fromSlot);else slot(d.item);
+        return;
+      }
+      const t=document.elementFromPoint(e.clientX,e.clientY);
+      const sl=t&&t.closest?t.closest("[data-slotidx]"):null;
+      if(sl){dragItem=d.item;dropSlot(parseInt(sl.getAttribute("data-slotidx")));}
+      else render();
+    };
+    el.onpointercancel=()=>{
+      if(ODrag&&ODrag.el===el){if(ODrag.ghost)ODrag.ghost.remove();ODrag=null;render();}
+    };
+  });
 }
 function tilesHTML(){
   const open=new Set(RT.tileOrder.slice(0,RT.tiles));
@@ -1378,7 +1428,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="21";
+const FC_BUILD="22";
 let L=null;
 function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
 function liveLeave(){try{stopLiveTimers();destroyVideo();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
