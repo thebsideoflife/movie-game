@@ -1363,6 +1363,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
+const FC_BUILD="19";
 let L=null;
 function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
 function liveLeave(){try{stopLiveTimers();destroyVideo();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
@@ -1413,6 +1414,7 @@ function ensureAudioButton(){
   s.appendChild(b);
 }
 function enableHostAudio(){
+  if(V.audioEnabled)return;
   V.audioEnabled=true;
   Object.keys(V.audioTiles).forEach(id=>{
     const t=V.els[id];if(!t)return;
@@ -1551,6 +1553,7 @@ function hostMsg(conn,d){
   if(d.t==="hello"){
     L.conns[conn.peer]=conn;
     L.players[conn.peer]={name:String(d.name||"player").slice(0,20),score:0};
+    if(d.b!==FC_BUILD)toast("⚠️ "+(L.players[conn.peer].name)+" is on an older version — have them refresh the page");
     try{conn.send({t:"welcome",game:L.game});}catch(e){}
     bcastView();renderLiveHost();
   }
@@ -1570,6 +1573,10 @@ function hostMsg(conn,d){
     if(!L.videoParts.find(p=>p.id===conn.peer))L.videoParts.push({id:conn.peer,name:(L.players[conn.peer]||{}).name||"player",mic:!!d.mic});
     if(V.stream)callParticipants();
     bcastView();renderLiveHost();
+  }
+  if(d.t==="micack"){
+    const nm=(L.players[conn.peer]||{}).name||"player";
+    toast(d.has?("🎙 "+nm+(d.on?" is LIVE":" muted")):("⚠️ "+nm+" has no mic — they may have denied mic permission or need to refresh"));
   }
   if(d.t==="answer"){
     if(L.screen!=="question"||conn.peer!==L.lockedBy)return;
@@ -1625,6 +1632,7 @@ function hostAdvance(){
 }
 function toggleAuto(){L.auto=!L.auto;if(L.auto)startLiveTimers();else stopLiveTimers();renderLiveHost();}
 function toggleMic(id){
+  enableHostAudio(); // host tap = gesture; unlock playback of player audio
   L.micOn=L.micOn||{};
   const on=!L.micOn[id];
   L.micOn[id]=on;
@@ -1785,7 +1793,7 @@ function liveJoin(code,name){
     L.myId=id;
     const conn=peer.connect("finalcut-"+code.toLowerCase(),{reliable:true});
     L.conn=conn;
-    conn.on("open",()=>{try{conn.send({t:"hello",name});}catch(e){}});
+    conn.on("open",()=>{try{conn.send({t:"hello",name,b:FC_BUILD});}catch(e){}});
     conn.on("data",d=>playerMsg(d));
     conn.on("close",()=>{if(L){L.view={screen:"disconnected"};renderLivePlayer();}});
   });
@@ -1796,9 +1804,11 @@ function playerMsg(d){
   if(!L||L.role!=="player"||!d)return;
   if(d.t==="welcome")L.game=d.game;
   if(d.t==="mic"){
-    if(V.stream&&V.stream.getAudioTracks)V.stream.getAudioTracks().forEach(t=>{t.enabled=!!d.on;});
-    L.micLive=!!d.on;
-    if(d.on)toast("🎙 the host put you on air!");
+    const has=V.stream&&V.stream.getAudioTracks&&V.stream.getAudioTracks().length>0;
+    if(has)V.stream.getAudioTracks().forEach(t=>{t.enabled=!!d.on;});
+    L.micLive=!!d.on&&has;
+    try{L.conn.send({t:"micack",on:!!d.on,has:!!has});}catch(e){}
+    if(d.on&&has)toast("🎙 the host put you on air!");
   }
   if(d.t==="view"){
     L.view=d.v;
