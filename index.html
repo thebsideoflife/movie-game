@@ -781,7 +781,7 @@ function anagramMask(q){
   const showN=Math.ceil(RT.maskOrder.length*(RT.hints/4));
   const show=new Set(RT.maskOrder.slice(0,showN));
   return [...ans].map((ch,i)=>{
-    if(!/[a-z0-9]/i.test(ch))return ch===" "?"&nbsp;&nbsp;":esc(ch);
+    if(!/[a-z0-9]/i.test(ch))return ch===" "?"&nbsp;&nbsp;&nbsp;&nbsp;":esc(ch);
     return show.has(i)?esc(ch.toUpperCase()):"_";
   }).join(" ");
 }
@@ -1434,7 +1434,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="23";
+const FC_BUILD="24";
 let L=null;
 function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
 function liveLeave(){try{stopLiveTimers();destroyVideo();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
@@ -1798,7 +1798,14 @@ function liveQHTML(r,q,v){
   if(r.type==="quote")return `<div class="quotecard center"><p class="muted" style="font-size:14px;margin-bottom:12px">🤖 audio-only quote — listen closely</p><button class="btn btn-gold btn-sm" onclick="liveSpeakQuote()">🔊 Play the quote</button></div><div class="prompt" style="font-size:20px;margin-top:14px">${esc(q.ask||"Name the movie")}</div>`;
   if(r.type==="ordering")return `<div class="prompt" style="font-size:21px">${esc(q.prompt)}</div><div class="pool">${(v.shuffled&&v.shuffled.length?v.shuffled:q.items.map((x,i)=>i)).map(i=>`<span class="chip">${esc(q.items[i].label)}</span>`).join("")}</div><p class="muted" style="margin-top:12px;font-size:13px">buzz in, then say the full order out loud</p>`;
   if(r.type==="riddle")return `<div class="prompt">"${esc(q.prompt)}"</div>`;
-  if(r.type==="anagram")return `<div class="scramble">${esc(q.scramble)}</div>`;
+  if(r.type==="anagram"){
+    const ans=q.display||(q.answers&&q.answers[0])||"";
+    const mask=[...ans].map(ch=>{
+      if(/[a-z0-9]/i.test(ch))return "_";
+      return ch===" "?"&nbsp;&nbsp;&nbsp;&nbsp;":esc(ch);
+    }).join(" ");
+    return `<div class="scramble">${esc(q.scramble)}</div><div class="mask">${mask}</div><p class="muted center" style="font-size:12.5px;margin-top:6px">the shape of the answer — one dash per letter</p>`;
+  }
   if(r.type==="math")return q.parts.map((p,i)=>`${i>0?`<div class="mathop">${i===1?esc(q.op||"+"):"="}</div>`:""}<div class="mathrow"><div class="clue-t">${esc(p.clue)}</div></div>`).join("")+`<p class="muted" style="margin-top:10px;font-size:13px">name all three movies</p>`;
   if(r.type==="twins")return `<div class="prompt">${esc(q.prompt)}</div><p class="muted" style="font-size:14px">two movies, same year, same idea — name BOTH</p>`;
   if(r.type==="pieces"){
