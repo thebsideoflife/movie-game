@@ -215,10 +215,14 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .scorechip b{color:var(--red)}
 .scorechip.buzzing{border-color:var(--red);box-shadow:0 0 0 3px var(--glow)}
 
+.hostcols{display:grid;grid-template-columns:1fr 400px;gap:22px;align-items:start}
+@media(max-width:900px){.hostcols{grid-template-columns:1fr}}
+.colhead{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--muted);margin-bottom:8px}
 .hostans{background:#fffdf2;border:1.5px dashed #dfc46a;border-radius:12px;padding:12px 16px;margin-top:14px;font-size:14.5px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
 
-#videostrip{position:fixed;top:12px;right:12px;display:flex;flex-wrap:wrap;gap:10px;z-index:95;max-width:560px;justify-content:flex-end}
-.vtile{width:min(260px,24vw);aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#000;position:relative;box-shadow:0 10px 30px rgba(0,0,0,.35);border:3px solid #fff}
+#videostrip{position:fixed;left:0;right:0;bottom:0;top:auto;display:flex;flex-wrap:nowrap;gap:10px;z-index:95;justify-content:center;align-items:center;padding:10px 10px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid var(--line);overflow-x:auto}
+body.hasvideo .wrap{padding-bottom:calc(min(200px,18vw)*0.75 + 90px)}
+.vtile{width:min(200px,18vw);aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#000;position:relative;box-shadow:0 10px 30px rgba(0,0,0,.35);border:3px solid #fff}
 .vtile video{width:100%;height:100%;object-fit:cover;display:block}
 .vtile span{position:absolute;bottom:6px;left:10px;color:#fff;font-size:13px;font-weight:800;text-shadow:0 1px 4px rgba(0,0,0,.9)}
 .miclive{display:block;text-align:center;background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:800;padding:10px 18px;border-radius:12px;box-shadow:0 6px 20px var(--glow);animation:micpulse 1.6s infinite;font-size:14px;margin:0 0 14px}
@@ -227,10 +231,9 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .vmic.on{background:linear-gradient(180deg,var(--red2),var(--red));border-color:#fff;animation:micpulse 1.6s infinite}
 .audiobtn{background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:800;border-radius:999px;padding:12px 18px;font-size:14px;box-shadow:0 8px 24px var(--glow);align-self:center}
 @media(max-width:700px){
-  #videostrip{max-width:100vw;left:0;right:0;top:auto;bottom:0;padding:8px 8px calc(8px + env(safe-area-inset-bottom));justify-content:center;background:rgba(255,255,255,.88);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
   .vtile{width:30vw}
-  body.hasvideo .wrap{padding-bottom:calc(26vw + 84px)}
-  body.hasvideo .fab{bottom:calc(26vw + 30px)}
+  body.hasvideo .wrap{padding-bottom:calc(22.5vw + 96px)}
+  body.hasvideo .fab{bottom:calc(22.5vw + 36px)}
 }
 
 /* TMDB panel */
@@ -477,7 +480,7 @@ function imgSrc(ref){
 /* ---------- game state ---------- */
 let S=null;   // play session
 let RT=null;  // per-question runtime
-function clearRT(){ if(RT&&RT.interval)clearInterval(RT.interval); RT=null; }
+function clearRT(){ if(RT&&RT.interval)clearInterval(RT.interval); if(RT&&RT.tInt)clearInterval(RT.tInt); RT=null; }
 
 function startGame(game){
   clearRT();
@@ -554,7 +557,25 @@ function promptImport(){
     if(!txt.startsWith("{")) txt=decodeURIComponent(escape(atob(txt)));
     const g=JSON.parse(txt);
     if(!g.rounds||!g.rounds.length)throw 0;
+    if(confirm("Save this game to your library so you can edit or host it later?")){
+      const c=JSON.parse(JSON.stringify(g));
+      c._id="g"+Date.now();c._updated=Date.now();
+      const l=DB.load();l.push(c);DB.save(l);
+    }
     startGame(g);
+  }catch(e){toast("Couldn't read that code");}
+}
+function adminImport(){
+  const code=prompt("Paste the game code or JSON:");
+  if(!code)return;
+  try{
+    let txt=code.trim();
+    if(!txt.startsWith("{"))txt=decodeURIComponent(escape(atob(txt)));
+    const g=JSON.parse(txt);
+    if(!g.rounds||!g.rounds.length)throw 0;
+    g._id="g"+Date.now();g._updated=Date.now();
+    const l=DB.load();l.push(g);DB.save(l);
+    C=g;renderCreator();toast("Imported & saved to your games");
   }catch(e){toast("Couldn't read that code");}
 }
 
@@ -573,7 +594,13 @@ function beginQuestion(){
   S.phase="question";
   const r=S.game.rounds[S.ri],q=r.questions[S.qi];
   clearRT();
-  RT={start:Date.now(),attempts:2,cluesShown:1,hints:0,tiles:0,order:[],pool:null};
+  RT={start:Date.now(),attempts:2,cluesShown:1,hints:0,tiles:0,order:[],pool:null,tleft:30,tInt:null};
+  RT.tInt=setInterval(()=>{
+    if(!RT)return;
+    RT.tleft--;
+    const e=$("qtimersec");if(e)e.textContent=RT.tleft;
+    if(RT.tleft<=0){clearInterval(RT.tInt);RT.tInt=null;finishQuestion(false,0,maxFor(S.game.rounds[S.ri]));}
+  },1000);
   if(r.type==="listReveal"){
     RT.interval=setInterval(()=>{
       if(RT.cluesShown<q.clues.length){RT.cluesShown++;updateCluesOnly();}
@@ -613,7 +640,10 @@ function qheadHTML(extra){
   const r=S.game.rounds[S.ri];
   return `<div class="qhead">
     <span class="qnum">R${S.ri+1} · Q${S.qi+1}/${r.questions.length}</span>
-    <span class="potbadge" id="pot">${extra||pot()+" pts"}</span>
+    <span style="display:flex;gap:8px;align-items:center">
+      <span class="potbadge" id="pot">${extra||pot()+" pts"}</span>
+      ${RT&&RT.tleft!=null?`<span class="potbadge">⏱ <b id="qtimersec">${RT.tleft}</b>s</span>`:""}
+    </span>
   </div>`;
 }
 function answerBarHTML(placeholder){
@@ -863,6 +893,7 @@ function maxFor(r){
 }
 function finishQuestion(correct,earned,max,partial){
   if(RT.interval)clearInterval(RT.interval);
+  if(RT.tInt){clearInterval(RT.tInt);RT.tInt=null;}
   earned=Math.round(earned);
   S.score+=earned;
   S.results[S.ri][S.qi]={correct,earned,max,partial:!!partial&&!correct,time:Math.round((Date.now()-RT.start)/1000)};
@@ -1023,7 +1054,7 @@ function renderAdmin(){
     <button class="addtile" onclick="adminNewFromS1E1()">+ From S1E1 template</button>
   </div>
   <div class="card"><h3 style="margin-bottom:8px">How sharing works (POC)</h3>
-  <p class="muted" style="font-size:13.5px;line-height:1.6">Games are auto-saved in this browser. <b>🔗 code</b> packs a game into a string friends paste under <b>Play a sent game</b>. Phase 2 turns these into real links with accounts, Tuesday/Thursday releases and leaderboards. <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="promptImport()">Import a code</button></p></div><button class="fab" onclick="tmdbPanel()" title="Movie research (TMDB)">🎬</button>`;
+  <p class="muted" style="font-size:13.5px;line-height:1.6">Games are auto-saved in this browser. <b>🔗 code</b> packs a game into a string friends paste under <b>Play a sent game</b>. Phase 2 turns these into real links with accounts, Tuesday/Thursday releases and leaderboards. <button class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="adminImport()">Import a code</button></p></div><button class="fab" onclick="tmdbPanel()" title="Movie research (TMDB)">🎬</button>`;
 }
 function adminFind(id){return DB.load().find(g=>g._id===id);}
 function adminEdit(id){C=adminFind(id);if(C)renderCreator();}
@@ -1433,10 +1464,31 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="25";
+const FC_BUILD="26";
+let ACX=null;
+function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}return ACX;}
+function tone(freq,start,dur,type,vol){
+  const c=ac();if(!c)return;
+  try{
+    const o=c.createOscillator(),g=c.createGain();
+    o.type=type||"sine";o.frequency.value=freq;
+    g.gain.setValueAtTime(0.0001,c.currentTime+start);
+    g.gain.linearRampToValueAtTime(vol||.25,c.currentTime+start+.02);
+    g.gain.exponentialRampToValueAtTime(.001,c.currentTime+start+dur);
+    o.connect(g);g.connect(c.destination);
+    o.start(c.currentTime+start);o.stop(c.currentTime+start+dur+.05);
+  }catch(e){}
+}
+function sfxBuzzIn(){tone(1200,0,.1);tone(1600,.08,.18);}
+function sfxCorrect(){tone(880,0,.18);tone(1318,.15,.4);}
+function sfxWrong(){tone(220,0,.4,"sawtooth",.18);tone(175,.14,.5,"sawtooth",.18);}
+function sfxTimesUp(){tone(660,0,.2);tone(550,.22,.2);tone(440,.44,.55);}
+function sfxDrum(){for(let i=0;i<16;i++)tone(130+Math.random()*50,i*.065,.05,"triangle",.3);}
+function sfxTada(){tone(523,0,.15);tone(659,.12,.15);tone(784,.24,.15);tone(1046,.36,.7);}
+
 let L=null;
 function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
-function liveLeave(){try{stopLiveTimers();destroyVideo();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
+function liveLeave(){try{stopLiveTimers();stopQTimer();destroyVideo();if(L&&L.peer)L.peer.destroy();}catch(e){}L=null;}
 /* ---- live video (mesh, host audio only) ---- */
 let V={stream:null,calls:{},els:{},audioTiles:{},audioEnabled:false};
 function ensureStrip(){
@@ -1632,7 +1684,7 @@ function liveHostStart(gameObj,attempt){
   if(!game.rounds.length)return toast("That game has no questions yet");
   liveLeave();
   const code=liveCode();
-  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[]};
+  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[],qTime:30,timeLeft:null,qInterval:null};
   const peer=new Peer("finalcut-"+code.toLowerCase());
   L.peer=peer;
   peer.on("open",()=>{if(L)renderLiveHost();});
@@ -1664,7 +1716,7 @@ function hostMsg(conn,d){
   }
   if(d.t==="buzz"){
     if(L.screen!=="question"||L.lockedBy||L.buzzedOut.includes(conn.peer)||!L.players[conn.peer])return;
-    L.lockedBy=conn.peer;stopLiveTimers();
+    L.lockedBy=conn.peer;stopLiveTimers();sfxBuzzIn();
     if(d.text){
       const q=L.game.rounds[L.ri].questions[L.qi];
       const text=String(d.text).slice(0,120);
@@ -1697,7 +1749,7 @@ function viewPayload(){
     tileOrder:L.tileOrder,shuffled:L.shufOrder,
     lockedBy:L.lockedBy?((L.players[L.lockedBy]||{}).name||"?"):null,lockedId:L.lockedBy,
     buzzedOut:L.buzzedOut.slice(),pot:livePot(),answerMode:L.answerMode,
-    videoOn:L.videoOn,vparts:L.videoParts||[],
+    videoOn:L.videoOn,vparts:L.videoParts||[],timeLeft:L.timeLeft,
     typed:L.typedAnswer?{name:L.typedAnswer.name,text:L.typedAnswer.text}:null,
     scores:Object.fromEntries(Object.values(L.players).map(p=>[p.name,p.score])),
     reveal:L.revealData}};
@@ -1717,6 +1769,7 @@ function liveBeginQ(){
   L.tileOrder=piecesOrder();
   L.shufOrder=q.items?shuffled(q.items.map((x,i)=>i)):[];
   if(L.auto)startLiveTimers();
+  startQTimer();
   bcastView();renderLiveHost();
 }
 function startLiveTimers(){
@@ -1730,6 +1783,20 @@ function startLiveTimers(){
   },2500);
 }
 function stopLiveTimers(){if(L&&L.interval){clearInterval(L.interval);L.interval=null;}}
+function stopQTimer(){if(L&&L.qInterval){clearInterval(L.qInterval);L.qInterval=null;}}
+function startQTimer(){
+  stopQTimer();
+  if(!L||!(L.qTime>0))return;
+  L.timeLeft=L.qTime;
+  L.qInterval=setInterval(()=>{
+    if(!L||L.screen!=="question"){stopQTimer();return;}
+    if(L.lockedBy)return; // paused while judging
+    L.timeLeft--;
+    const e=document.getElementById("qtimersec");if(e)e.textContent=L.timeLeft;
+    Object.values(L.conns).forEach(c=>{try{c.send({t:"tick",s:L.timeLeft});}catch(err){}});
+    if(L.timeLeft<=0){stopQTimer();sfxTimesUp();liveReveal();}
+  },1000);
+}
 function hostAdvance(){
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
   if(r.type==="listReveal"&&L.cluesShown<q.clues.length)L.cluesShown++;
@@ -1765,10 +1832,18 @@ function hostAnswerText(r,q){
   if(r.type==="twins")return q.a.display+" + "+q.b.display;
   return q.display||(q.answers&&q.answers[0])||"—";
 }
+function liveAward(frac){
+  if(!L.lockedBy)return;
+  const pts=Math.max(1,Math.round(livePot()*frac));
+  L.players[L.lockedBy].score+=pts;
+  sfxCorrect();
+  liveReveal();
+}
 function liveJudge(ok){
   if(!L.lockedBy)return;
-  if(ok){L.players[L.lockedBy].score+=livePot();liveReveal();}
-  else{L.buzzedOut.push(L.lockedBy);L.lockedBy=null;L.typedAnswer=null;if(L.auto)startLiveTimers();bcastView();renderLiveHost();}
+  if(ok){liveAward(1);return;}
+  sfxWrong();
+  L.buzzedOut.push(L.lockedBy);L.lockedBy=null;L.typedAnswer=null;if(L.auto)startLiveTimers();bcastView();renderLiveHost();
 }
 function liveRevealData(){
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
@@ -1779,7 +1854,7 @@ function liveRevealData(){
   if(r.type==="quote")return {kind:"quote",quote:q.quote,text:q.display||(q.answers&&q.answers[0])||"",fact:q.fact};
   return {kind:"text",text:q.display||(q.answers&&q.answers[0])||"",fact:q.fact};
 }
-function liveReveal(){L.revealData=liveRevealData();L.screen="reveal";L.lockedBy=null;stopLiveTimers();bcastView();renderLiveHost();}
+function liveReveal(){L.revealData=liveRevealData();L.screen="reveal";L.lockedBy=null;stopLiveTimers();stopQTimer();bcastView();renderLiveHost();}
 function liveNext(){
   const r=L.game.rounds[L.ri];
   if(L.qi<r.questions.length-1){L.qi++;liveBeginQ();}
@@ -1826,7 +1901,7 @@ function liveRevealHTML(d){
 }
 function renderLiveHost(){
   if(!L||L.role!=="host")return;
-  window.scrollTo(0,0);setWide(false);
+  window.scrollTo(0,0);setWide(true);
   const v=viewPayload().v;
   const buzzingName=L.lockedBy?((L.players[L.lockedBy]||{}).name):null;
   const chips=liveScoresChips(v,buzzingName)+micRowHTML();
@@ -1843,6 +1918,10 @@ function renderLiveHost(){
         <button class="typechip ${L.answerMode==="voice"?"sel":""}" onclick="L.answerMode='voice';renderLiveHost()">🎤 out loud</button>
         <button class="typechip ${L.answerMode==="typed"?"sel":""}" onclick="L.answerMode='typed';renderLiveHost()">⌨️ typed on phones</button>
       </div>
+      <div class="formactions" style="justify-content:center;margin-top:10px;align-items:center">
+        <span class="muted" style="font-size:13px">Question timer:</span>
+        ${[15,30,45,60,0].map(s=>`<button class="typechip ${L.qTime===s?"sel":""}" onclick="L.qTime=${s};renderLiveHost()">${s?s+"s":"off"}</button>`).join("")}
+      </div>
       ${L.videoOn
         ?`<p class="muted" style="font-size:12.5px;margin-top:12px">🎥 cameras on — your mic is live to players; they get a "turn on my camera" button (up to 4)</p>`
         :`<div style="margin-top:14px"><button class="btn btn-ghost btn-sm" onclick="hostStartVideo()">🎥 Turn on cameras + host mic</button></div>`}
@@ -1858,27 +1937,51 @@ function renderLiveHost(){
     const r=L.game.rounds[L.ri],q=r.questions[L.qi];
     const canAdvance=(r.type==="listReveal"&&L.cluesShown<q.clues.length)||(r.type==="pieces"&&L.tiles<24);
     const advLabel=r.type==="pieces"?"▶ Reveal more":"▶ Next clue";
-    body=`<div class="qhead"><span class="qnum">R${L.ri+1} · Q${L.qi+1}/${r.questions.length}</span><span class="potbadge">${livePot()} pts</span></div>
-    ${liveQHTML(r,q,v)}
-    <div class="hostans">${L.showAns?`<b>Answer:</b> ${esc(hostAnswerText(r,q))}`:`<span class="muted">answer hidden</span>`}
-      <button class="btn btn-ghost btn-sm" style="margin-left:10px" onclick="L.showAns=!L.showAns;renderLiveHost()">${L.showAns?"hide":"show"}</button>
-      <span class="muted" style="font-size:11.5px;margin-left:8px">host only — hide if sharing this screen</span></div>
-    <div class="card" style="margin-top:12px;padding:16px">
-      ${L.lockedBy
-        ?`<p style="font-weight:800;font-size:18px;margin-bottom:6px">🔔 ${esc(buzzingName||"?")} buzzed${L.answerMode==="typed"?"!":" — they answer out loud!"}</p>
-          ${L.answerMode==="typed"?(L.typedAnswer
-            ?`<p style="font-size:17px;margin-bottom:10px">typed: <b>“${esc(L.typedAnswer.text)}”</b> ${L.typedAnswer.ok===true?'<span style="color:var(--good);font-weight:800">· fuzzy match ✓</span>':L.typedAnswer.ok===false?'<span style="color:var(--bad);font-weight:800">· no match ✗</span>':""}</p>`
-            :`<p class="muted" style="margin-bottom:10px">waiting for their typed answer…</p>`):""}
+    body=`<div class="qhead"><span class="qnum">R${L.ri+1} · Q${L.qi+1}/${r.questions.length}</span>
+      <span style="display:flex;gap:8px;align-items:center">
+        <span class="potbadge">${livePot()} pts</span>
+        ${L.timeLeft!=null?`<span class="potbadge">⏱ <b id="qtimersec">${L.timeLeft}</b>s</span>`:""}
+      </span></div>
+    <div class="hostcols">
+      <div>
+        <p class="colhead">👀 what players see</p>
+        ${liveQHTML(r,q,v)}
+      </div>
+      <div>
+        <p class="colhead">🎬 host controls</p>
+        <div class="hostans" style="margin-top:0">${L.showAns?`<b>Answer:</b>&nbsp;${esc(hostAnswerText(r,q))}`:`<span class="muted">answer hidden</span>`}
+          <button class="btn btn-ghost btn-sm" onclick="L.showAns=!L.showAns;renderLiveHost()">${L.showAns?"hide":"show"}</button></div>
+        <div class="card" style="margin-top:12px;padding:16px">
+          ${L.lockedBy
+            ?`<p style="font-weight:800;font-size:17px;margin-bottom:6px">🔔 ${esc(buzzingName||"?")} buzzed${L.answerMode==="typed"?"!":" — answers out loud!"}</p>
+              ${L.answerMode==="typed"?(L.typedAnswer
+                ?`<p style="font-size:16px;margin-bottom:10px">typed: <b>“${esc(L.typedAnswer.text)}”</b> ${L.typedAnswer.ok===true?'<span style="color:var(--good);font-weight:800">· fuzzy match ✓</span>':L.typedAnswer.ok===false?'<span style="color:var(--bad);font-weight:800">· no match ✗</span>':""}</p>`
+                :`<p class="muted" style="margin-bottom:10px">waiting for their typed answer…</p>`):""}
+              <div class="formactions" style="margin-top:0">
+                <button class="btn btn-gold btn-sm" onclick="liveAward(1)">✓ Full +${livePot()}</button>
+                <button class="btn btn-ghost btn-sm" onclick="liveAward(0.5)">½ Partial +${Math.max(1,Math.round(livePot()/2))}</button>
+                <button class="btn btn-ghost btn-sm" onclick="liveJudge(false)">✗ Wrong</button>
+              </div>`
+            :`<div class="formactions" style="margin-top:0;align-items:center">
+                ${canAdvance?`<button class="btn btn-gold btn-sm" onclick="hostAdvance()">${advLabel}</button>
+                <button class="typechip ${L.auto?"sel":""}" onclick="toggleAuto()" title="auto-reveal on a timer">⏱ auto ${L.auto?"on":"off"}</button>`:`<span class="muted" style="font-size:14px">waiting for a buzz…</span>`}
+                <button class="btn btn-ghost btn-sm" onclick="liveReveal()">Reveal answer</button>
+              </div>`}
+        </div>
+        <div class="card" style="margin-top:12px;padding:12px 16px">
+          <p class="colhead" style="margin-bottom:8px">🎛 soundboard</p>
           <div class="formactions" style="margin-top:0">
-            <button class="btn btn-gold btn-sm" onclick="liveJudge(true)">✓ Correct +${livePot()}</button>
-            <button class="btn btn-ghost btn-sm" onclick="liveJudge(false)">✗ Wrong</button>
-          </div>`
-        :`<div class="formactions" style="margin-top:0;align-items:center">
-            ${canAdvance?`<button class="btn btn-gold btn-sm" onclick="hostAdvance()">${advLabel}</button>
-            <button class="typechip ${L.auto?"sel":""}" onclick="toggleAuto()" title="auto-reveal on a timer">⏱ auto ${L.auto?"on":"off"}</button>`:`<span class="muted" style="font-size:14px">waiting for a buzz…</span>`}
-            <button class="btn btn-ghost btn-sm" onclick="liveReveal()">Reveal answer</button>
-          </div>`}
-    </div>${chips}`;
+            <button class="typechip" onclick="sfxBuzzIn()" title="buzz-in">🔔</button>
+            <button class="typechip" onclick="sfxCorrect()" title="correct ding">✅</button>
+            <button class="typechip" onclick="sfxWrong()" title="wrong buzzer">❌</button>
+            <button class="typechip" onclick="sfxTimesUp()" title="time's up">⏰</button>
+            <button class="typechip" onclick="sfxDrum()" title="drumroll">🥁</button>
+            <button class="typechip" onclick="sfxTada()" title="ta-da">🎉</button>
+          </div>
+        </div>
+        ${chips}
+      </div>
+    </div>`;
   }else if(L.screen==="reveal"){
     body=`<div class="card revealcard">${liveRevealHTML(L.revealData)}
       <button class="btn btn-gold" onclick="liveNext()">Next</button></div>${chips}`;
@@ -1919,6 +2022,7 @@ function liveJoin(code,name){
 }
 function playerMsg(d){
   if(!L||L.role!=="player"||!d)return;
+  if(d.t==="tick"){const e=document.getElementById("qtimersec");if(e)e.textContent=d.s;return;}
   if(d.t==="welcome")L.game=d.game;
   if(d.t==="mic"){
     const has=V.stream&&V.stream.getAudioTracks&&V.stream.getAudioTracks().length>0;
@@ -2001,7 +2105,11 @@ function renderLivePlayer(){
       <button class="buzzbtn" id="buzzbtn" disabled onclick="buzz()">BUZZ</button>
       <p class="muted" style="font-size:12px;margin-top:10px">type your answer to unlock the buzzer — first buzz wins</p>`;
     else buzzArea=`<button class="buzzbtn" onclick="buzz()">BUZZ</button>`;
-    body=`<div class="qhead"><span class="qnum">R${v.ri+1} · Q${v.qi+1}</span><span class="potbadge">${v.pot} pts</span></div>
+    body=`<div class="qhead"><span class="qnum">R${v.ri+1} · Q${v.qi+1}</span>
+      <span style="display:flex;gap:8px;align-items:center">
+        <span class="potbadge">${v.pot} pts</span>
+        ${v.timeLeft!=null?`<span class="potbadge">⏱ <b id="qtimersec">${v.timeLeft}</b>s</span>`:""}
+      </span></div>
       ${q?liveQHTML(r,q,v):""}
       <div class="center" style="margin:22px 0">${buzzArea}</div>`;
   }
