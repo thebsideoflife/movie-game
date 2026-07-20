@@ -224,6 +224,19 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .scorechip b{color:var(--red)}
 .scorechip.buzzing{border-color:var(--red);box-shadow:0 0 0 3px var(--glow)}
 
+.glib{}
+@media(min-width:900px){.wide .glib{grid-template-columns:repeat(3,1fr)}}
+.edcols{display:grid;grid-template-columns:420px 1fr;gap:18px;align-items:start}
+@media(max-width:900px){.edcols{grid-template-columns:1fr}}
+.qform{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.qform .span2{grid-column:1/-1}
+@media(max-width:700px){.qform{grid-template-columns:1fr}}
+.pctile{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.75);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.9)}
+.pctile.num{background:rgba(214,34,28,.5)}
+.sbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px}
+.sbtn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 4px;font-size:10.5px;font-weight:700;color:var(--steel);display:flex;flex-direction:column;align-items:center;gap:2px}
+.sbtn span{font-size:18px}
+.sbtn:hover{border-color:var(--red2);color:var(--red)}
 .hostcols{display:grid;grid-template-columns:1fr 400px;gap:22px;align-items:start}
 @media(max-width:900px){.hostcols{grid-template-columns:1fr}}
 .colhead{font-size:11.5px;letter-spacing:.12em;text-transform:uppercase;font-weight:800;color:var(--muted);margin-bottom:8px}
@@ -645,7 +658,7 @@ function beginQuestion(){
   if(r.type==="quote")setTimeout(()=>{try{speakQuote()}catch(e){}},450);
   if(r.type==="pieces"){
     RT.tiles=4;
-    RT.tileOrder=piecesOrder();
+    RT.tileOrder=(q.tileOrder&&q.tileOrder.length===24)?q.tileOrder.slice():piecesOrder();
     RT.interval=setInterval(()=>{
       if(RT.tiles<24){RT.tiles++;renderTilesOnly();}
       else clearInterval(RT.interval);
@@ -1084,7 +1097,7 @@ function persistC(){
 }
 function openCreator(){renderAdmin();}
 function renderAdmin(){
-  window.scrollTo(0,0);setWide(false);C=null;
+  window.scrollTo(0,0);setWide(true);C=null;
   const games=DB.load().sort((a,b)=>(b._updated||0)-(a._updated||0));
   const tiles=games.map(g=>{
     const qn=g.rounds.reduce((s,r)=>s+r.questions.length,0);
@@ -1104,7 +1117,7 @@ function renderAdmin(){
   <div class="topbar"><div class="brand" onclick="S=null;C=null;render()">Final Cut</div>
     <button class="btn btn-ghost btn-sm" onclick="S=null;render()">← Home</button></div>
   <div class="crhead"><h2 class="display" style="font-size:26px">Admin portal</h2><span class="tag">saved in this browser</span></div>
-  <div class="grid2" style="margin-bottom:14px">
+  <div class="grid2 glib" style="margin-bottom:14px">
     ${tiles}
     <button class="addtile" onclick="adminNew()">+ New game</button>
     <button class="addtile" onclick="adminNewFromS1E1()">+ From S1E1 template</button>
@@ -1234,7 +1247,7 @@ function moveRound(i,d){const j=i+d;if(j<0||j>=C.rounds.length)return;[C.rounds[
 
 /* ---- round editor ---- */
 function renderRoundEditor(ri){
-  window.scrollTo(0,0);setWide(false);persistC();
+  window.scrollTo(0,0);setWide(true);persistC();
   const r=C.rounds[ri];
   app().innerHTML=`
   <div class="topbar">
@@ -1245,6 +1258,7 @@ function renderRoundEditor(ri){
     <h2 class="display" style="font-size:24px">Round ${ri+1}</h2>
     <span class="tag">auto-saved ✓</span>
   </div>
+  <div class="edcols">
   <div class="card" style="margin-bottom:14px">
     <div class="field"><label>Round name</label><input type="text" value="${esc(r.name)}" onchange="C.rounds[${ri}].name=this.value;persistC()"></div>
     <div class="field"><label>Round type — tap to change</label>
@@ -1270,6 +1284,7 @@ function renderRoundEditor(ri){
       <button class="btn btn-gold btn-sm" onclick="editQ(${ri},-1)">+ add question</button>
       <button class="btn btn-ghost btn-sm" onclick="tmdbPanel()">🎬 Movie research</button>
     </div>
+  </div>
   </div><button class="fab" onclick="tmdbPanel()" title="Movie research (TMDB)">🎬</button>`;
 }
 function moveQ(ri,i,d){const qs=C.rounds[ri].questions,j=i+d;if(j<0||j>=qs.length)return;[qs[i],qs[j]]=[qs[j],qs[i]];persistC();renderRoundEditor(ri);}
@@ -1416,7 +1431,7 @@ function tmdbCopy(){
 
 /* --- question editor (simple per-type forms) --- */
 function editQ(ri,qi){
-  setWide(false);
+  setWide(true);
   const r=C.rounds[ri];
   const q=qi>=0?r.questions[qi]:null;
   const t=r.type;
@@ -1438,8 +1453,11 @@ function editQ(ri,qi){
   }else if(t==="ordering"){
     fields=`
     ${f("Prompt (e.g. Order by release date, earliest first)","in","f_prompt",v(q&&q.prompt))}
-    ${f("Movies in the CORRECT order — one per line. Add a note after a | (e.g. Scream | Dec 1996). Players see them shuffled.","ta","f_items",(q?q.items.map(it=>it.label+(it.note?" | "+it.note:"")).join("\n"):""))}
-    ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}`;
+    ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}
+    <div class="field"><label>Movies in the CORRECT order — one per line (players see them shuffled)</label>
+      <textarea id="f_items" rows="6">${q?esc(q.items.map(it=>it.label).join("\n")):""}</textarea></div>
+    <div class="field"><label>Answer shown for each — year, box office, wins… (one per line, matches left)</label>
+      <textarea id="f_notes" rows="6">${q?esc(q.items.map(it=>it.note||"").join("\n")):""}</textarea></div>`;
   }else if(t==="riddle"){
     fields=`
     ${f("The reworded title","ta","f_prompt",v(q&&q.prompt))}
@@ -1489,22 +1507,98 @@ function editQ(ri,qi){
     ${f("Poster image — paste a URL, or use 🎬 research → 🖼 Use this poster","in","f_img",v(q&&q.img&&!IMG[q.img]?q.img:""))}
     ${f("Accepted answers — comma separated","in","f_answers",(q?q.answers.join(", "):""))}
     ${f("Display answer","in","f_display",v(q&&q.display))}
-    ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}`;
+    ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}
+    <div class="field span2"><label>Reveal order — how the poster uncovers, tile by tile</label>
+      <div class="formactions" style="margin-top:0">
+        <button type="button" class="typechip" onclick="pcAuto()">🤖 auto — hide the title longest</button>
+        <button type="button" class="typechip" onclick="pcManual()">✏️ manual — click tiles in order</button>
+        <button type="button" class="typechip" onclick="pcClear()">🎲 random (default)</button>
+      </div>
+      <div id="pcwrap" style="margin-top:10px"></div>
+      <p class="muted" id="pcstatus" style="font-size:12px;margin-top:6px"></p>
+    </div>`;
   }
   app().innerHTML=`
   <div class="topbar"><div class="brand">Final Cut</div>
     <button class="btn btn-ghost btn-sm" onclick="renderRoundEditor(${ri})">← back</button></div>
   <div class="card">
-    <div class="tag" style="margin-bottom:14px">${TYPE_META[t].label}</div>
-    ${fields}
+    <div class="tag" style="margin-bottom:14px">${TYPE_META[t].icon} ${TYPE_META[t].label}</div>
+    <div class="qform">${fields}</div>
     <div class="formactions">
       <button class="btn btn-gold" onclick="saveQ(${ri},${qi})">Save question</button>
       <button class="btn btn-ghost" onclick="renderRoundEditor(${ri})">Cancel</button>
     </div>
   </div><button class="fab" onclick="tmdbPanel()" title="Movie research (TMDB)">🎬</button>`;
+  if(t==="pieces"){
+    PC={order:(q&&q.tileOrder)?q.tileOrder.slice():[],manual:false};
+    const fi=document.getElementById("f_img");
+    if(fi){
+      if(q&&q.img&&IMG[q.img])fi.setAttribute("data-ref",q.img);
+      fi.onchange=()=>pcRender();
+    }
+    pcRender();
+    pcStatus(PC.order.length?"custom reveal order saved with this question":"random order at play time (bottom rows last)");
+  }
+}
+let PC={order:[],manual:false};
+function pcImgSrc(){const vv=gv("f_img");if(vv)return imgSrc(vv);const e=document.getElementById("f_img");return e&&e.getAttribute("data-ref")?imgSrc(e.getAttribute("data-ref")):"";}
+function pcStatus(t){const e=document.getElementById("pcstatus");if(e)e.textContent=t;}
+function pcRender(){
+  const w=document.getElementById("pcwrap");if(!w)return;
+  const srcU=pcImgSrc();
+  if(!srcU){w.innerHTML='<p class="muted" style="font-size:12px">add a poster image first</p>';return;}
+  let tiles="";
+  for(let i=0;i<24;i++){
+    const pos=PC.order.indexOf(i);
+    tiles+=`<div class="pctile ${pos>=0?"num":""}" onclick="pcTileClick(${i})">${pos>=0?pos+1:""}</div>`;
+  }
+  w.innerHTML=`<div class="piecebox" style="max-width:280px;margin:0"><img src="${srcU}" alt=""><div class="tilegrid">${tiles}</div></div>`;
+}
+function pcTileClick(i){
+  if(!PC.manual)return;
+  const idx=PC.order.indexOf(i);
+  if(idx>=0)PC.order.splice(idx,1);else PC.order.push(i);
+  pcRender();
+  pcStatus(PC.order.length+" of 24 numbered — any unnumbered tiles reveal last, shuffled");
+}
+function pcManual(){PC.manual=true;PC.order=[];pcRender();pcStatus("click tiles in the order they should reveal (click again to remove)");}
+function pcClear(){PC.manual=false;PC.order=[];pcRender();pcStatus("random order at play time (bottom rows saved for last)");}
+function pcComplete(order){
+  const seen=new Set(order);
+  return order.concat(shuffled([...Array(24).keys()].filter(i=>!seen.has(i))));
+}
+async function pcAuto(){
+  const srcU=pcImgSrc();if(!srcU)return toast("Add a poster image first");
+  pcStatus("analyzing poster for text-heavy tiles…");
+  try{
+    const img=new Image();img.crossOrigin="anonymous";
+    await new Promise((res,rej)=>{img.onload=res;img.onerror=rej;img.src=srcU;});
+    const W=96,H=144;
+    const cv=document.createElement("canvas");cv.width=W;cv.height=H;
+    const cx=cv.getContext("2d");cx.drawImage(img,0,0,W,H);
+    const d=cx.getImageData(0,0,W,H).data;
+    const lum=(x,y)=>{const p=(y*W+x)*4;return d[p]*.3+d[p+1]*.59+d[p+2]*.11;};
+    const scores=[];
+    for(let t2=0;t2<24;t2++){
+      const tx=(t2%4)*24,ty=Math.floor(t2/4)*24;
+      let edges=0;
+      for(let y=ty;y<ty+24;y++)for(let x=tx+1;x<tx+24;x++){
+        if(Math.abs(lum(x,y)-lum(x-1,y))>40)edges++;
+      }
+      scores.push(edges);
+    }
+    const idx=[...Array(24).keys()];
+    idx.sort((a,b)=>scores[a]-scores[b]);
+    PC.order=idx;PC.manual=false;
+    pcRender();
+    pcStatus("auto order set — the busiest, most text-like tiles reveal last. Switch to manual to tweak.");
+  }catch(e){
+    PC.order=[];pcRender();
+    pcStatus("couldn't analyze this image (cross-origin blocked) — falling back to random");
+  }
 }
 function f(label,kind,id,val){
-  return `<div class="field"><label>${label}</label>${
+  return `<div class="field ${kind==="ta"?"span2":""}"><label>${label}</label>${
     kind==="ta"?`<textarea id="${id}" rows="4">${val}</textarea>`
                :`<input type="text" id="${id}" value="${val}">`}</div>`;
 }
@@ -1516,12 +1610,21 @@ function saveQ(ri,qi){
   try{
     if(t==="listReveal")q={clues:gv("f_clues").split("\n").map(s=>s.trim()).filter(Boolean),answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
     if(t==="quote")q={quote:gv("f_quote"),ask:gv("f_ask")||"Name the movie",answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
-    if(t==="ordering")q={prompt:gv("f_prompt"),items:gv("f_items").split("\n").map(s=>s.trim()).filter(Boolean).map(line=>{const[label,note]=line.split("|").map(x=>x.trim());return{label,note};}),fact:gv("f_fact")||undefined};
+    if(t==="ordering"){
+      const labels=gv("f_items").split("\n").map(s=>s.trim()).filter(Boolean);
+      const notes=gv("f_notes").split("\n").map(s=>s.trim());
+      q={prompt:gv("f_prompt"),items:labels.map((label,i)=>({label,note:notes[i]||""})),fact:gv("f_fact")||undefined};
+    }
     if(t==="riddle")q={prompt:gv("f_prompt"),answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
     if(t==="anagram")q={scramble:gv("f_scramble"),answers:csv("f_answers"),display:gv("f_display")};
     if(t==="math")q={op:gv("f_op")||"+",parts:[0,1,2].map(i=>({clue:gv("f_c"+i),answers:csv("f_a"+i),display:gv("f_d"+i)}))};
     if(t==="twins")q={prompt:gv("f_prompt"),a:{answers:csv("f_aa"),display:gv("f_ad"),img:gv("f_ai")||undefined},b:{answers:csv("f_ba"),display:gv("f_bd"),img:gv("f_bi")||undefined},fact:gv("f_fact")||undefined};
-    if(t==="pieces")q={img:gv("f_img"),answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
+    if(t==="pieces"){
+      const fi=document.getElementById("f_img");
+      const imgVal=gv("f_img")||((fi&&fi.getAttribute("data-ref"))||"");
+      q={img:imgVal,answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined,
+         tileOrder:PC.order&&PC.order.length?pcComplete(PC.order):undefined};
+    }
     if(t==="merger")q={display:gv("f_display"),answers:csv("f_answers"),left:gv("f_lt"),right:gv("f_rt"),
       a:{hint:gv("f_ah"),year:gv("f_ay"),actor1:gv("f_a1"),actor2:gv("f_a2")},
       b:{hint:gv("f_bh"),year:gv("f_by"),actor1:gv("f_b1"),actor2:gv("f_b2")},fact:gv("f_fact")||undefined};
@@ -1539,27 +1642,85 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="27";
-let ACX=null;
-function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();}catch(e){}}return ACX;}
-function tone(freq,start,dur,type,vol){
-  const c=ac();if(!c)return;
+const FC_BUILD="28";
+let ACX=null,MASTER=null,SFXVOL=0.8;
+function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
+function master(){
+  const c=ac();if(!c)return null;
+  if(!MASTER){MASTER=c.createGain();MASTER.gain.value=SFXVOL;MASTER.connect(c.destination);}
+  return MASTER;
+}
+function sfxSetVol(v){SFXVOL=Math.max(0,Math.min(1,v));if(MASTER)MASTER.gain.value=SFXVOL;}
+function sfxStop(){try{if(ACX){ACX.close();ACX=null;MASTER=null;}}catch(e){}}
+function tone(freq,start,dur,type,vol,freqEnd){
+  const c=ac(),m=master();if(!c||!m)return;
   try{
     const o=c.createOscillator(),g=c.createGain();
-    o.type=type||"sine";o.frequency.value=freq;
+    o.type=type||"sine";
+    o.frequency.setValueAtTime(freq,c.currentTime+start);
+    if(freqEnd)o.frequency.linearRampToValueAtTime(freqEnd,c.currentTime+start+dur);
     g.gain.setValueAtTime(0.0001,c.currentTime+start);
     g.gain.linearRampToValueAtTime(vol||.25,c.currentTime+start+.02);
     g.gain.exponentialRampToValueAtTime(.001,c.currentTime+start+dur);
-    o.connect(g);g.connect(c.destination);
+    o.connect(g);g.connect(m);
     o.start(c.currentTime+start);o.stop(c.currentTime+start+dur+.05);
+  }catch(e){}
+}
+function noiseBurst(start,dur,vol){
+  const c=ac(),m=master();if(!c||!m)return;
+  try{
+    const len=Math.max(1,Math.floor(c.sampleRate*dur));
+    const buf=c.createBuffer(1,len,c.sampleRate);
+    const d=buf.getChannelData(0);
+    for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*(1-i/len);
+    const s=c.createBufferSource();s.buffer=buf;
+    const g=c.createGain();
+    g.gain.setValueAtTime(vol||.3,c.currentTime+start);
+    g.gain.exponentialRampToValueAtTime(.001,c.currentTime+start+dur);
+    s.connect(g);g.connect(m);
+    s.start(c.currentTime+start);
   }catch(e){}
 }
 function sfxBuzzIn(){tone(1200,0,.1);tone(1600,.08,.18);}
 function sfxCorrect(){tone(880,0,.18);tone(1318,.15,.4);}
 function sfxWrong(){tone(220,0,.4,"sawtooth",.18);tone(175,.14,.5,"sawtooth",.18);}
 function sfxTimesUp(){tone(660,0,.2);tone(550,.22,.2);tone(440,.44,.55);}
-function sfxDrum(){for(let i=0;i<16;i++)tone(130+Math.random()*50,i*.065,.05,"triangle",.3);}
-function sfxTada(){tone(523,0,.15);tone(659,.12,.15);tone(784,.24,.15);tone(1046,.36,.7);}
+function sfxDrum(){for(let i=0;i<20;i++){noiseBurst(i*.06,.045,.22);tone(120+Math.random()*40,i*.06,.05,"triangle",.25);}}
+function sfxTada(){tone(523,0,.15);tone(659,.12,.15);tone(784,.24,.15);tone(1046,.36,.7);noiseBurst(.36,.5,.12);}
+function sfxIntro(){[262,330,392,523,659].forEach((n,i)=>tone(n,i*.12,.16,"square",.16));tone(784,.62,.8,"square",.2);}
+function sfxApplause(){for(let i=0;i<34;i++)noiseBurst(Math.random()*1.7,.05+Math.random()*.06,.16+Math.random()*.12);}
+function sfxBoo(){tone(180,0,1.2,"sawtooth",.14,120);tone(150,.1,1.2,"sawtooth",.12,100);tone(210,.05,1,"sawtooth",.1,140);}
+function sfxSadHorn(){tone(392,0,.32,"sawtooth",.2);tone(370,.36,.32,"sawtooth",.2);tone(349,.72,.32,"sawtooth",.2);tone(330,1.08,.9,"sawtooth",.22,233);}
+function sfxSuspense(){[220,262,311,262,220,262,311,370].forEach((n,i)=>tone(n,i*.16,.18,"triangle",.18));tone(415,1.3,1,"triangle",.2);}
+function sfxKaching(){tone(1568,0,.12);tone(2093,.09,.5);noiseBurst(0,.08,.15);}
+function sfxWhoosh(){noiseBurst(0,.55,.4);}
+function sfxTick(){tone(1000,0,.04,"square",.22);tone(760,.45,.04,"square",.22);}
+function sbHTML(){
+  const btn=(fn,ico,lab)=>`<button class="sbtn" onclick="${fn}()" title="${lab}"><span>${ico}</span>${lab}</button>`;
+  return `<div class="card" style="margin-top:12px;padding:12px 16px">
+    <p class="colhead" style="margin-bottom:8px">🎛 soundboard</p>
+    <div class="sbgrid">
+      ${btn("sfxIntro","🎺","intro")}
+      ${btn("sfxBuzzIn","🔔","buzz-in")}
+      ${btn("sfxCorrect","✅","correct")}
+      ${btn("sfxWrong","❌","wrong")}
+      ${btn("sfxSadHorn","📯","sad horn")}
+      ${btn("sfxTimesUp","⏰","time's up")}
+      ${btn("sfxTick","⏱","tick")}
+      ${btn("sfxDrum","🥁","drumroll")}
+      ${btn("sfxSuspense","😱","suspense")}
+      ${btn("sfxApplause","👏","applause")}
+      ${btn("sfxBoo","👎","boo")}
+      ${btn("sfxKaching","💰","ka-ching")}
+      ${btn("sfxTada","🎉","ta-da")}
+    </div>
+    <div class="formactions" style="margin-top:10px;align-items:center">
+      <span class="muted" style="font-size:12px">vol</span>
+      <input type="range" min="0" max="100" value="${Math.round(SFXVOL*100)}" style="flex:1;max-width:160px" oninput="sfxSetVol(this.value/100)">
+      <button class="typechip" onclick="sfxStop()">⏹ stop</button>
+    </div>
+  </div>`;
+}
 
 let L=null;
 function liveCode(){const A="ABCDEFGHJKMNPQRSTUVWXYZ";let s="";for(let i=0;i<4;i++)s+=A[Math.floor(Math.random()*A.length)];return s;}
@@ -1842,7 +2003,7 @@ function liveStart(){L.screen="roundIntro";bcastView();renderLiveHost();}
 function liveBeginQ(){
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
   L.screen="question";L.cluesShown=1;L.tiles=4;L.lockedBy=null;L.buzzedOut=[];L.revealData=null;L.typedAnswer=null;
-  L.tileOrder=piecesOrder();
+  L.tileOrder=(q.tileOrder&&q.tileOrder.length===24)?q.tileOrder.slice():piecesOrder();
   L.shufOrder=q.items?shuffled(q.items.map((x,i)=>i)):[];
   if(L.auto)startLiveTimers();
   startQTimer();
@@ -1879,6 +2040,7 @@ function startQTimer(){
 function hostAdvance(){
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
   if(r.type==="listReveal"&&L.cluesShown<q.clues.length)L.cluesShown++;
+  else if(r.type==="merger"&&L.cluesShown<4)L.cluesShown++;
   else if(r.type==="pieces"&&L.tiles<24)L.tiles=Math.min(24,L.tiles+2);
   bcastView();renderLiveHost();
 }
@@ -2018,8 +2180,8 @@ function renderLiveHost(){
       <button class="btn btn-gold" onclick="liveBeginQ()">Show first question</button></div>${chips}`;
   }else if(L.screen==="question"){
     const r=L.game.rounds[L.ri],q=r.questions[L.qi];
-    const canAdvance=(r.type==="listReveal"&&L.cluesShown<q.clues.length)||(r.type==="pieces"&&L.tiles<24);
-    const advLabel=r.type==="pieces"?"▶ Reveal more":"▶ Next clue";
+    const canAdvance=(r.type==="listReveal"&&L.cluesShown<q.clues.length)||(r.type==="pieces"&&L.tiles<24)||(r.type==="merger"&&L.cluesShown<4);
+    const advLabel=r.type==="pieces"?"▶ Reveal more":r.type==="merger"?"▶ Next clues":"▶ Next clue";
     body=`<div class="qhead"><span class="qnum">R${L.ri+1} · Q${L.qi+1}/${r.questions.length}</span>
       <span style="display:flex;gap:8px;align-items:center">
         <span class="potbadge">${livePot()} pts</span>
@@ -2051,27 +2213,17 @@ function renderLiveHost(){
                 <button class="btn btn-ghost btn-sm" onclick="liveReveal()">Reveal answer</button>
               </div>`}
         </div>
-        <div class="card" style="margin-top:12px;padding:12px 16px">
-          <p class="colhead" style="margin-bottom:8px">🎛 soundboard</p>
-          <div class="formactions" style="margin-top:0">
-            <button class="typechip" onclick="sfxBuzzIn()" title="buzz-in">🔔</button>
-            <button class="typechip" onclick="sfxCorrect()" title="correct ding">✅</button>
-            <button class="typechip" onclick="sfxWrong()" title="wrong buzzer">❌</button>
-            <button class="typechip" onclick="sfxTimesUp()" title="time's up">⏰</button>
-            <button class="typechip" onclick="sfxDrum()" title="drumroll">🥁</button>
-            <button class="typechip" onclick="sfxTada()" title="ta-da">🎉</button>
-          </div>
-        </div>
+        ${sbHTML()}
         ${chips}
       </div>
     </div>`;
   }else if(L.screen==="reveal"){
     body=`<div class="card revealcard">${liveRevealHTML(L.revealData)}
-      <button class="btn btn-gold" onclick="liveNext()">Next</button></div>${chips}`;
+      <button class="btn btn-gold" onclick="liveNext()">Next</button></div>${chips}${sbHTML()}`;
   }else if(L.screen==="scores"){
     body=`<div class="card center" style="padding:32px"><div class="tag">Round ${L.ri+1} complete</div>
       <div style="margin-top:16px">${chips}</div>
-      <div style="margin-top:20px"><button class="btn btn-gold" onclick="liveNextRound()">Next round</button></div></div>`;
+      <div style="margin-top:20px"><button class="btn btn-gold" onclick="liveNextRound()">Next round</button></div></div>${sbHTML()}`;
   }else if(L.screen==="final"){
     const ranked=Object.values(L.players).sort((a,b)=>b.score-a.score);
     body=`<div class="center"><div class="marquee">The End</div>
