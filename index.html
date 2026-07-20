@@ -1642,7 +1642,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="28";
+const FC_BUILD="29";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
@@ -1999,6 +1999,12 @@ function livePot(){
   if(r.type==="math")return 15;
   return 10;
 }
+function copyInvite(){
+  const url=location.origin+location.pathname+"#join="+L.code;
+  (navigator.clipboard?navigator.clipboard.writeText(url):Promise.reject())
+    .then(()=>toast("Invite link copied — send it to your players"))
+    .catch(()=>{prompt("Copy this invite link:",url);});
+}
 function liveStart(){L.screen="roundIntro";bcastView();renderLiveHost();}
 function liveBeginQ(){
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
@@ -2156,7 +2162,10 @@ function renderLiveHost(){
     body=`<div class="card center" style="padding:36px 22px">
       <div class="tag">room code</div>
       <div class="display" style="font-size:64px;letter-spacing:.18em;color:var(--red);margin:12px 0">${L.code}</div>
-      <p class="muted" style="margin-bottom:6px">players: open <b>this site</b> on a phone → <b>Live room</b> → enter the code</p>
+      <div class="formactions" style="justify-content:center;margin-top:4px">
+        <button class="btn btn-gold btn-sm" onclick="copyInvite()">🔗 Copy invite link</button>
+      </div>
+      <p class="muted" style="font-size:12.5px;margin:10px 0 6px">the link opens the join screen with the code filled in — or players go to the site → Live room → enter the code</p>
       ${chips||'<p class="muted" style="font-size:13px;margin-top:10px">waiting for players…</p>'}
       <div class="formactions" style="justify-content:center;margin-top:20px;align-items:center">
         <span class="muted" style="font-size:13px">Answers:</span>
@@ -2375,6 +2384,16 @@ function renderLivePlayer(){
     const l=document.createElement("link");l.rel="icon";l.href=IMG.logo;document.head.appendChild(l);
   }
   const h=location.hash;
+  if(h&&h.startsWith("#join=")){
+    const code=h.slice(6).replace(/[^a-zA-Z]/g,"").slice(0,4).toUpperCase();
+    if(code.length===4){
+      renderLiveEntry();
+      const jc=document.getElementById("jcode");if(jc)jc.value=code;
+      const jn=document.getElementById("jname");if(jn)jn.focus();
+      toast("Joining room "+code+" — enter your name!");
+      return;
+    }
+  }
   if(h&&h.startsWith("#g=")){
     try{
       const g=JSON.parse(decodeURIComponent(escape(atob(h.slice(3)))));
