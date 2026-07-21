@@ -1642,7 +1642,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="29";
+const FC_BUILD="30";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
@@ -1920,7 +1920,7 @@ function liveHostStart(gameObj,attempt){
   if(!game.rounds.length)return toast("That game has no questions yet");
   liveLeave();
   const code=liveCode();
-  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[],qTime:30,timeLeft:null,qInterval:null};
+  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",mode:"buzzer",answers:{},auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[],qTime:30,timeLeft:null,qInterval:null};
   const peer=new Peer("finalcut-"+code.toLowerCase());
   L.peer=peer;
   peer.on("open",()=>{if(L)renderLiveHost();});
@@ -1951,6 +1951,7 @@ function hostMsg(conn,d){
     bcastView();renderLiveHost();
   }
   if(d.t==="buzz"){
+    if(L.mode==="timed")return;
     if(L.screen!=="question"||L.lockedBy||L.buzzedOut.includes(conn.peer)||!L.players[conn.peer])return;
     L.lockedBy=conn.peer;stopLiveTimers();sfxBuzzIn();
     if(d.text){
@@ -1973,6 +1974,15 @@ function hostMsg(conn,d){
     toast(d.has?("🎙 "+nm+(d.on?" is LIVE":" muted")):("⚠️ "+nm+" has no mic — they may have denied mic permission or need to refresh"));
   }
   if(d.t==="answer"){
+    if(L.mode==="timed"){
+      if(L.screen!=="question"||!L.players[conn.peer])return;
+      const q=L.game.rounds[L.ri].questions[L.qi];
+      const text=String(d.text||"").slice(0,120);
+      if(!L.answers)L.answers={};
+      L.answers[conn.peer]={name:(L.players[conn.peer]||{}).name||"?",text,ok:(q&&q.answers&&q.answers.length)?isMatch(text,q.answers):null,awarded:null};
+      bcastView();renderLiveHost();
+      return;
+    }
     if(L.screen!=="question"||conn.peer!==L.lockedBy)return;
     const q=L.game.rounds[L.ri].questions[L.qi];
     const text=String(d.text||"").slice(0,120);
@@ -1984,7 +1994,8 @@ function viewPayload(){
   return {t:"view",v:{screen:L.screen,ri:L.ri,qi:L.qi,cluesShown:L.cluesShown,tiles:L.tiles,
     tileOrder:L.tileOrder,shuffled:L.shufOrder,
     lockedBy:L.lockedBy?((L.players[L.lockedBy]||{}).name||"?"):null,lockedId:L.lockedBy,
-    buzzedOut:L.buzzedOut.slice(),pot:livePot(),answerMode:L.answerMode,
+    buzzedOut:L.buzzedOut.slice(),pot:livePot(),answerMode:L.answerMode,mode:L.mode||"buzzer",
+    answeredCount:Object.keys(L.answers||{}).length,totalPlayers:Object.keys(L.players).length,
     videoOn:L.videoOn,vparts:L.videoParts||[],timeLeft:L.timeLeft,
     typed:L.typedAnswer?{name:L.typedAnswer.name,text:L.typedAnswer.text}:null,
     scores:Object.fromEntries(Object.values(L.players).map(p=>[p.name,p.score])),
@@ -2008,7 +2019,7 @@ function copyInvite(){
 function liveStart(){L.screen="roundIntro";bcastView();renderLiveHost();}
 function liveBeginQ(){
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
-  L.screen="question";L.cluesShown=1;L.tiles=4;L.lockedBy=null;L.buzzedOut=[];L.revealData=null;L.typedAnswer=null;
+  L.screen="question";L.cluesShown=1;L.tiles=4;L.lockedBy=null;L.buzzedOut=[];L.revealData=null;L.typedAnswer=null;L.answers={};
   L.tileOrder=(q.tileOrder&&q.tileOrder.length===24)?q.tileOrder.slice():piecesOrder();
   L.shufOrder=q.items?shuffled(q.items.map((x,i)=>i)):[];
   if(L.auto)startLiveTimers();
@@ -2040,8 +2051,23 @@ function startQTimer(){
     L.timeLeft--;
     const e=document.getElementById("qtimersec");if(e)e.textContent=L.timeLeft;
     Object.values(L.conns).forEach(c=>{try{c.send({t:"tick",s:L.timeLeft});}catch(err){}});
-    if(L.timeLeft<=0){stopQTimer();sfxTimesUp();liveReveal();}
+    if(L.timeLeft<=0){stopQTimer();sfxTimesUp();if(L.mode==="timed")liveEndTimed();else liveReveal();}
   },1000);
+}
+function liveEndTimed(){
+  stopQTimer();stopLiveTimers();
+  L.screen="grading";
+  bcastView();renderLiveHost();
+}
+function liveTimedGrade(pid,frac){
+  if(!L.answers)L.answers={};
+  const a=L.answers[pid]||{name:(L.players[pid]||{}).name||"?",text:""};
+  a.awarded=frac;
+  L.answers[pid]=a;
+  const pts=Math.round(livePot()*frac);
+  if(L.players[pid])L.players[pid].score+=pts;
+  if(frac>0)sfxCorrect();else sfxWrong();
+  bcastView();renderLiveHost();
 }
 function hostAdvance(){
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
@@ -2168,10 +2194,17 @@ function renderLiveHost(){
       <p class="muted" style="font-size:12.5px;margin:10px 0 6px">the link opens the join screen with the code filled in — or players go to the site → Live room → enter the code</p>
       ${chips||'<p class="muted" style="font-size:13px;margin-top:10px">waiting for players…</p>'}
       <div class="formactions" style="justify-content:center;margin-top:20px;align-items:center">
+        <span class="muted" style="font-size:13px">Game mode:</span>
+        <button class="typechip ${(L.mode||"buzzer")==="buzzer"?"sel":""}" onclick="L.mode='buzzer';renderLiveHost()">🔔 First in</button>
+        <button class="typechip ${L.mode==="timed"?"sel":""}" onclick="L.mode='timed';renderLiveHost()">⏱ Timed — everyone answers</button>
+      </div>
+      ${L.mode==="timed"
+        ?`<p class="muted" style="font-size:12.5px;margin-top:8px">everyone types an answer during the timer — you grade each one once time's up</p>`
+        :`<div class="formactions" style="justify-content:center;margin-top:10px;align-items:center">
         <span class="muted" style="font-size:13px">Answers:</span>
         <button class="typechip ${L.answerMode==="voice"?"sel":""}" onclick="L.answerMode='voice';renderLiveHost()">🎤 out loud</button>
         <button class="typechip ${L.answerMode==="typed"?"sel":""}" onclick="L.answerMode='typed';renderLiveHost()">⌨️ typed on phones</button>
-      </div>
+      </div>`}
       <div class="formactions" style="justify-content:center;margin-top:10px;align-items:center">
         <span class="muted" style="font-size:13px">Question timer:</span>
         ${[15,30,45,60,0].map(s=>`<button class="typechip ${L.qTime===s?"sel":""}" onclick="L.qTime=${s};renderLiveHost()">${s?s+"s":"off"}</button>`).join("")}
@@ -2206,7 +2239,16 @@ function renderLiveHost(){
         <div class="hostans" style="margin-top:0">${L.showAns?`<b>Answer:</b>&nbsp;${esc(hostAnswerText(r,q))}`:`<span class="muted">answer hidden</span>`}
           <button class="btn btn-ghost btn-sm" onclick="L.showAns=!L.showAns;renderLiveHost()">${L.showAns?"hide":"show"}</button></div>
         <div class="card" style="margin-top:12px;padding:16px">
-          ${L.lockedBy
+          ${L.mode==="timed"
+            ?`<div class="formactions" style="margin-top:0;align-items:center">
+                ${canAdvance?`<button class="btn btn-gold btn-sm" onclick="hostAdvance()">${advLabel}</button>
+                <button class="typechip ${L.auto?"sel":""}" onclick="toggleAuto()" title="auto-reveal on a timer">⏱ auto ${L.auto?"on":"off"}</button>`:""}
+              </div>
+              <p style="font-weight:800;font-size:16px;margin:10px 0 6px">📝 ${Object.keys(L.answers||{}).length}/${Object.keys(L.players).length} answered</p>
+              <div class="formactions" style="margin-top:0">
+                <button class="btn btn-gold btn-sm" onclick="liveEndTimed()">⏹ End &amp; grade now</button>
+              </div>`
+            : (L.lockedBy
             ?`<p style="font-weight:800;font-size:17px;margin-bottom:6px">🔔 ${esc(buzzingName||"?")} buzzed${L.answerMode==="typed"?"!":" — answers out loud!"}</p>
               ${L.answerMode==="typed"?(L.typedAnswer
                 ?`<p style="font-size:16px;margin-bottom:10px">typed: <b>“${esc(L.typedAnswer.text)}”</b> ${L.typedAnswer.ok===true?'<span style="color:var(--good);font-weight:800">· fuzzy match ✓</span>':L.typedAnswer.ok===false?'<span style="color:var(--bad);font-weight:800">· no match ✗</span>':""}</p>`
@@ -2220,12 +2262,35 @@ function renderLiveHost(){
                 ${canAdvance?`<button class="btn btn-gold btn-sm" onclick="hostAdvance()">${advLabel}</button>
                 <button class="typechip ${L.auto?"sel":""}" onclick="toggleAuto()" title="auto-reveal on a timer">⏱ auto ${L.auto?"on":"off"}</button>`:`<span class="muted" style="font-size:14px">waiting for a buzz…</span>`}
                 <button class="btn btn-ghost btn-sm" onclick="liveReveal()">Reveal answer</button>
-              </div>`}
+              </div>`)}
         </div>
         ${sbHTML()}
         ${chips}
       </div>
     </div>`;
+  }else if(L.screen==="grading"){
+    const r=L.game.rounds[L.ri],q=r.questions[L.qi];
+    const rows=Object.entries(L.players).map(([pid,p])=>{
+      const a=(L.answers||{})[pid];
+      const graded=a&&a.awarded!=null;
+      return `<div class="card" style="margin:8px 0;padding:12px;text-align:left">
+        <b>${esc(p.name)}</b> ${a?`— “${esc(a.text)}” ${a.ok===true?'<span style="color:var(--good);font-weight:800">✓ fuzzy match</span>':a.ok===false?'<span style="color:var(--bad);font-weight:800">✗ no match</span>':""}`:'<span class="muted">no answer</span>'}
+        ${graded
+          ?`<div class="tag" style="margin-top:6px">+${Math.round(livePot()*a.awarded)} pts</div>`
+          :`<div class="formactions" style="margin-top:8px">
+              <button class="btn btn-gold btn-sm" onclick="liveTimedGrade('${pid}',1)">✓ Full +${livePot()}</button>
+              <button class="btn btn-ghost btn-sm" onclick="liveTimedGrade('${pid}',0.5)">½ Partial +${Math.max(1,Math.round(livePot()/2))}</button>
+              <button class="btn btn-ghost btn-sm" onclick="liveTimedGrade('${pid}',0)">✗ Wrong</button>
+            </div>`}
+      </div>`;
+    }).join("");
+    body=`<div class="qhead"><span class="qnum">R${L.ri+1} · Q${L.qi+1}/${r.questions.length}</span></div>
+    <div class="hostans" style="margin-top:0">${L.showAns?`<b>Answer:</b>&nbsp;${esc(hostAnswerText(r,q))}`:`<span class="muted">answer hidden</span>`}
+      <button class="btn btn-ghost btn-sm" onclick="L.showAns=!L.showAns;renderLiveHost()">${L.showAns?"hide":"show"}</button></div>
+    <p class="colhead" style="margin-top:14px">📝 grade each player</p>
+    ${rows}
+    <div style="margin-top:14px"><button class="btn btn-gold" onclick="liveReveal()">Reveal answer</button></div>
+    ${chips}${sbHTML()}`;
   }else if(L.screen==="reveal"){
     body=`<div class="card revealcard">${liveRevealHTML(L.revealData)}
       <button class="btn btn-gold" onclick="liveNext()">Next</button></div>${chips}${sbHTML()}`;
@@ -2279,7 +2344,13 @@ function playerMsg(d){
   if(d.t==="view"){
     L.view=d.v;
     if(d.v.screen!=="question")L.buzzed=false;
-    if(d.v.screen!=="question"||d.v.lockedId!==L.myId)L.sentAnswer=false;
+    if(d.v.mode==="timed"){
+      const qkey=d.v.ri+"_"+d.v.qi;
+      if(d.v.screen==="question"&&L.answeredQKey!==qkey){L.sentAnswer=false;L.myLastAnswer=null;}
+      if(d.v.screen==="question")L.answeredQKey=qkey;
+    }else{
+      if(d.v.screen!=="question"||d.v.lockedId!==L.myId)L.sentAnswer=false;
+    }
     if(V.stream)callParticipants();
   }
   renderLivePlayer();
@@ -2288,6 +2359,7 @@ function sendAnswer(){
   const e=document.getElementById("panswer");
   if(!e||!e.value.trim()||!L||!L.conn)return;
   L.sentAnswer=true;
+  L.myLastAnswer=e.value.trim();
   try{L.conn.send({t:"answer",text:e.value.trim()});}catch(err){}
   renderLivePlayer();
 }
@@ -2323,6 +2395,26 @@ function renderLivePlayer(){
     <div class="rule">${r?(r.rule||""):""}</div><p class="muted">get your buzzer finger ready…</p>
     ${v.videoOn&&!V.stream&&((v.vparts||[]).length<5)?`<div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="playerStartVideo()">🎥 turn on my camera</button></div>`:""}</div>`;
   }
+  else if(v.screen==="question"&&v.mode==="timed"){
+    const r=L.game&&L.game.rounds[v.ri],q=r&&r.questions[v.qi];
+    const buzzArea=`
+      <div class="answerbar" style="max-width:420px;margin:0 auto 10px">
+        <input type="text" id="panswer" placeholder="type your answer…" autocomplete="off" onkeydown="if(event.key==='Enter')sendAnswer()">
+        <button class="btn btn-gold" onclick="sendAnswer()">Send</button>
+      </div>
+      <p class="muted" style="font-size:12.5px">${L.sentAnswer?"✅ answer sent — you can change it and resend until time's up":"everyone answers — take your time, then send"}</p>`;
+    body=`<div class="qhead"><span class="qnum">R${v.ri+1} · Q${v.qi+1}</span>
+      <span style="display:flex;gap:8px;align-items:center">
+        <span class="potbadge">${v.pot} pts</span>
+        ${v.timeLeft!=null?`<span class="potbadge">⏱ <b id="qtimersec">${v.timeLeft}</b>s</span>`:""}
+      </span></div>
+      ${q?liveQHTML(r,q,v):""}
+      <div class="center" style="margin:22px 0">${buzzArea}</div>`;
+  }
+  else if(v.screen==="grading")body=`<div class="card center" style="padding:36px 22px"><div class="tag">⏳ time's up</div>
+    <p style="margin:14px 0 4px;font-size:16px">the host is grading everyone's answers…</p>
+    ${L.myLastAnswer?`<p class="muted" style="font-size:14px">you answered: “${esc(L.myLastAnswer)}”</p>`:`<p class="muted" style="font-size:14px">you didn't send an answer this round</p>`}
+    ${liveScoresChips(v)}</div>`;
   else if(v.screen==="question"){
     const r=L.game&&L.game.rounds[v.ri],q=r&&r.questions[v.qi];
     const out=(v.buzzedOut||[]).includes(L.myId);
