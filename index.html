@@ -1101,12 +1101,10 @@ function renderAdmin(){
   const games=DB.load().sort((a,b)=>(b._updated||0)-(a._updated||0));
   const tiles=games.map(g=>{
     const qn=g.rounds.reduce((s,r)=>s+r.questions.length,0);
-    const gm=g.mode==="timed"?"timed":"buzzer";
     return `<div class="gtile">
       <span class="tag">game</span>
       <h3>${esc(g.title||"untitled")}</h3>
       <div class="tilemeta">${g.rounds.length} rounds · ${qn} questions</div>
-      <button class="typechip ${gm==="timed"?"sel":""}" style="margin-top:8px" onclick="event.stopPropagation();toggleGameMode('${g._id}')" title="Click to switch this game's live mode">${gm==="timed"?"⏱ Timed":"🔔 First in"} — tap to switch</button>
       <div class="tileactions">
         <button onclick="adminEdit('${g._id}')">✏️ edit</button>
         <button onclick="adminPlay('${g._id}')">▶ play</button>
@@ -1142,18 +1140,8 @@ function adminCode(id){
 }
 function adminDup(id){const g=adminFind(id);if(!g)return;const c=JSON.parse(JSON.stringify(g));c._id="g"+Date.now();c.title=(c.title||"untitled")+" (copy)";c._updated=Date.now();const l=DB.load();l.push(c);DB.save(l);renderAdmin();}
 function adminDel(id){if(!confirm("Delete this game?"))return;DB.save(DB.load().filter(g=>g._id!==id));renderAdmin();}
-function toggleGameMode(id){
-  const l=DB.load();
-  const g=l.find(x=>x._id===id);
-  if(!g)return;
-  g.mode=(g.mode==="timed")?"buzzer":"timed";
-  g._updated=Date.now();
-  DB.save(l);
-  toast(g.mode==="timed"?"⏱ "+(g.title||"game")+" is now Timed":"🔔 "+(g.title||"game")+" is now First in");
-  renderAdmin();
-}
-function adminNew(){C={title:"untitled game",author:"",mode:"buzzer",rounds:[]};persistC();renderCreator();}
-function adminNewFromS1E1(){C=JSON.parse(JSON.stringify(GAME_S1E1));C.title="my remix of S1E1";if(!C.mode)C.mode="buzzer";persistC();renderCreator();toast("S1E1 copied — remix away");}
+function adminNew(){C={title:"untitled game",author:"",rounds:[]};persistC();renderCreator();}
+function adminNewFromS1E1(){C=JSON.parse(JSON.stringify(GAME_S1E1));C.title="my remix of S1E1";persistC();renderCreator();toast("S1E1 copied — remix away");}
 
 /* ---- game editor: round tiles with drag reorder ---- */
 function renderCreator(){
@@ -1195,13 +1183,7 @@ function renderCreator(){
   </div>
   <div class="card" style="margin-bottom:16px">
     <div class="field"><label>Game title</label><input type="text" value="${esc(C.title)}" onchange="C.title=this.value;persistC();renderCreator()"></div>
-    <div class="field"><label>Host / author</label><input type="text" value="${esc(C.author)}" onchange="C.author=this.value;persistC()" placeholder="you"></div>
-    <div class="field" style="margin-bottom:0"><label>Live game mode</label>
-      <div class="formactions" style="margin-top:4px">
-        <button class="typechip ${(C.mode||"buzzer")==="buzzer"?"sel":""}" onclick="C.mode='buzzer';persistC();renderCreator()">🔔 First in</button>
-        <button class="typechip ${C.mode==="timed"?"sel":""}" onclick="C.mode='timed';persistC();renderCreator()">⏱ Timed — everyone answers</button>
-      </div>
-    </div>
+    <div class="field" style="margin-bottom:0"><label>Host / author</label><input type="text" value="${esc(C.author)}" onchange="C.author=this.value;persistC()" placeholder="you"></div>
   </div>
   <div class="creatorcols">
     <div>
@@ -1660,7 +1642,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="34";
+const FC_BUILD="35";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
@@ -1936,9 +1918,12 @@ function liveHostStart(gameObj,attempt){
   delete game._id;delete game._updated;
   game.rounds=game.rounds.filter(r=>r.questions.length);
   if(!game.rounds.length)return toast("That game has no questions yet");
+  // per-round timed/first-in is a live-session setting only — preset a sensible
+  // default per round type here, the host can flip any round in the lobby before starting.
+  game.rounds.forEach(r=>{r.mode=(r.type==="listReveal"||r.type==="merger"||r.type==="pieces")?"timed":"buzzer";});
   liveLeave();
   const code=liveCode();
-  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",mode:game.mode==="timed"?"timed":"buzzer",answers:{},auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[],qTime:30,timeLeft:null,qInterval:null};
+  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",mode:"buzzer",answers:{},auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[],qTime:30,timeLeft:null,qInterval:null};
   const peer=new Peer("finalcut-"+code.toLowerCase());
   L.peer=peer;
   peer.on("open",()=>{if(L)renderLiveHost();});
@@ -2034,9 +2019,15 @@ function copyInvite(){
     .then(()=>toast("Invite link copied — send it to your players"))
     .catch(()=>{prompt("Copy this invite link:",url);});
 }
+function liveToggleRoundMode(ri){
+  const r=L.game.rounds[ri];
+  r.mode=r.mode==="timed"?"buzzer":"timed";
+  renderLiveHost();
+}
 function liveStart(){L.screen="roundIntro";bcastView();renderLiveHost();}
 function liveBeginQ(){
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
+  L.mode=r.mode==="timed"?"timed":"buzzer";
   L.screen="question";L.cluesShown=1;L.tiles=4;L.lockedBy=null;L.buzzedOut=[];L.revealData=null;L.typedAnswer=null;L.answers={};
   L.tileOrder=(q.tileOrder&&q.tileOrder.length===24)?q.tileOrder.slice():piecesOrder();
   L.shufOrder=q.items?shuffled(q.items.map((x,i)=>i)):[];
@@ -2212,16 +2203,15 @@ function renderLiveHost(){
       </div>
       <p class="muted" style="font-size:12.5px;margin:10px 0 6px">the link opens the join screen with the code filled in — or players go to the site → Live room → enter the code</p>
       ${chips||'<p class="muted" style="font-size:13px;margin-top:10px">waiting for players…</p>'}
-      <div class="formactions" style="justify-content:center;margin-top:20px;align-items:center">
-        <span class="muted" style="font-size:13px">Game mode:</span>
-        <span class="tag">${L.mode==="timed"?"⏱ Timed — everyone answers":"🔔 First in — one buzzer wins"}</span>
-        <span class="muted" style="font-size:12px">(set on the game's tile in the admin portal)</span>
+      <div class="formactions" style="justify-content:center;margin-top:20px;align-items:center;flex-wrap:wrap">
+        <span class="muted" style="font-size:13px;width:100%;text-align:center;margin-bottom:4px">Rounds — tap any round to switch it between 🔔 first in and ⏱ timed (this session only):</span>
+        ${L.game.rounds.map((r,ri)=>`<button class="typechip ${r.mode==="timed"?"sel":""}" onclick="liveToggleRoundMode(${ri})">${TYPE_META[r.type].icon} ${esc(r.name)} · ${r.mode==="timed"?"⏱ timed":"🔔 first in"}</button>`).join("")}
       </div>
-      ${L.mode==="timed"?"":`<div class="formactions" style="justify-content:center;margin-top:10px;align-items:center">
-        <span class="muted" style="font-size:13px">Answers:</span>
+      <div class="formactions" style="justify-content:center;margin-top:10px;align-items:center">
+        <span class="muted" style="font-size:13px">Answers (first-in rounds):</span>
         <button class="typechip ${L.answerMode==="voice"?"sel":""}" onclick="L.answerMode='voice';renderLiveHost()">🎤 out loud</button>
         <button class="typechip ${L.answerMode==="typed"?"sel":""}" onclick="L.answerMode='typed';renderLiveHost()">⌨️ typed on phones</button>
-      </div>`}
+      </div>
       <div class="formactions" style="justify-content:center;margin-top:10px;align-items:center">
         <span class="muted" style="font-size:13px">Question timer:</span>
         ${[15,30,45,60,0].map(s=>`<button class="typechip ${L.qTime===s?"sel":""}" onclick="L.qTime=${s};renderLiveHost()">${s?s+"s":"off"}</button>`).join("")}
