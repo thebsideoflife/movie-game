@@ -1140,7 +1140,7 @@ function adminCode(id){
 }
 function adminDup(id){const g=adminFind(id);if(!g)return;const c=JSON.parse(JSON.stringify(g));c._id="g"+Date.now();c.title=(c.title||"untitled")+" (copy)";c._updated=Date.now();const l=DB.load();l.push(c);DB.save(l);renderAdmin();}
 function adminDel(id){if(!confirm("Delete this game?"))return;DB.save(DB.load().filter(g=>g._id!==id));renderAdmin();}
-function adminNew(){C={title:"untitled game",author:"",rounds:[]};persistC();renderCreator();}
+function adminNew(){C={title:"untitled game",author:"",mode:"buzzer",rounds:[]};persistC();renderCreator();}
 function adminNewFromS1E1(){C=JSON.parse(JSON.stringify(GAME_S1E1));C.title="my remix of S1E1";persistC();renderCreator();toast("S1E1 copied — remix away");}
 
 /* ---- game editor: round tiles with drag reorder ---- */
@@ -1183,7 +1183,13 @@ function renderCreator(){
   </div>
   <div class="card" style="margin-bottom:16px">
     <div class="field"><label>Game title</label><input type="text" value="${esc(C.title)}" onchange="C.title=this.value;persistC();renderCreator()"></div>
-    <div class="field" style="margin-bottom:0"><label>Host / author</label><input type="text" value="${esc(C.author)}" onchange="C.author=this.value;persistC()" placeholder="you"></div>
+    <div class="field"><label>Host / author</label><input type="text" value="${esc(C.author)}" onchange="C.author=this.value;persistC()" placeholder="you"></div>
+    <div class="field" style="margin-bottom:0"><label>Live game mode (default — can still be changed in the host lobby)</label>
+      <div class="formactions" style="margin-top:4px">
+        <button class="typechip ${(C.mode||"buzzer")==="buzzer"?"sel":""}" onclick="C.mode='buzzer';persistC();renderCreator()">🔔 First in</button>
+        <button class="typechip ${C.mode==="timed"?"sel":""}" onclick="C.mode='timed';persistC();renderCreator()">⏱ Timed — everyone answers</button>
+      </div>
+    </div>
   </div>
   <div class="creatorcols">
     <div>
@@ -1642,7 +1648,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="30";
+const FC_BUILD="31";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
@@ -1920,7 +1926,7 @@ function liveHostStart(gameObj,attempt){
   if(!game.rounds.length)return toast("That game has no questions yet");
   liveLeave();
   const code=liveCode();
-  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",mode:"buzzer",answers:{},auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[],qTime:30,timeLeft:null,qInterval:null};
+  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",mode:game.mode==="timed"?"timed":"buzzer",answers:{},auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[],qTime:30,timeLeft:null,qInterval:null};
   const peer=new Peer("finalcut-"+code.toLowerCase());
   L.peer=peer;
   peer.on("open",()=>{if(L)renderLiveHost();});
@@ -2030,13 +2036,13 @@ function startLiveTimers(){
   stopLiveTimers();
   const r=L.game.rounds[L.ri],q=r.questions[L.qi];
   if(r.type==="listReveal")L.interval=setInterval(()=>{
-    if(L.cluesShown<q.clues.length){L.cluesShown++;bcastView();renderLiveHost();}else stopLiveTimers();
+    if(L.cluesShown<q.clues.length){L.cluesShown++;startQTimer();bcastView();renderLiveHost();}else stopLiveTimers();
   },6000);
   if(r.type==="pieces")L.interval=setInterval(()=>{
-    if(L.tiles<24){L.tiles++;bcastView();renderLiveHost();}else stopLiveTimers();
+    if(L.tiles<24){L.tiles++;startQTimer();bcastView();renderLiveHost();}else stopLiveTimers();
   },2500);
   if(r.type==="merger")L.interval=setInterval(()=>{
-    if(L.cluesShown<4){L.cluesShown++;bcastView();renderLiveHost();}else stopLiveTimers();
+    if(L.cluesShown<4){L.cluesShown++;startQTimer();bcastView();renderLiveHost();}else stopLiveTimers();
   },7000);
 }
 function stopLiveTimers(){if(L&&L.interval){clearInterval(L.interval);L.interval=null;}}
@@ -2074,6 +2080,7 @@ function hostAdvance(){
   if(r.type==="listReveal"&&L.cluesShown<q.clues.length)L.cluesShown++;
   else if(r.type==="merger"&&L.cluesShown<4)L.cluesShown++;
   else if(r.type==="pieces"&&L.tiles<24)L.tiles=Math.min(24,L.tiles+2);
+  startQTimer(); // fresh full countdown whenever a new clue/tile is revealed
   bcastView();renderLiveHost();
 }
 function toggleAuto(){L.auto=!L.auto;if(L.auto)startLiveTimers();else stopLiveTimers();renderLiveHost();}
