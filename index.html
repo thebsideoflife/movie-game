@@ -1251,6 +1251,8 @@ function moveRound(i,d){const j=i+d;if(j<0||j>=C.rounds.length)return;[C.rounds[
 function renderRoundEditor(ri){
   window.scrollTo(0,0);setWide(true);persistC();
   const r=C.rounds[ri];
+  const rMode=(r.mode||defaultModeForType(r.type))==="timed"?"timed":"buzzer";
+  if(!r.mode){r.mode=rMode;persistC();}
   app().innerHTML=`
   <div class="topbar">
     <div class="brand" onclick="S=null;C=null;render()">Final Cut</div>
@@ -1271,8 +1273,8 @@ function renderRoundEditor(ri){
     </div>
     <div class="field"><label>How players answer this round</label>
       <div class="formactions" style="margin-top:4px">
-        <button class="typechip ${(r.mode||defaultModeForType(r.type))==="buzzer"?"sel":""}" onclick="setRoundMode(${ri},'buzzer')">🔔 First in — one buzzer wins</button>
-        <button class="typechip ${r.mode==="timed"?"sel":""}" onclick="setRoundMode(${ri},'timed')">⏱ Timed — everyone answers, host grades</button>
+        <button class="typechip ${rMode==="buzzer"?"sel":""}" onclick="setRoundMode(${ri},'buzzer')">🔔 First in — one buzzer wins</button>
+        <button class="typechip ${rMode==="timed"?"sel":""}" onclick="setRoundMode(${ri},'timed')">⏱ Timed — everyone answers, host grades</button>
       </div>
     </div>
     <div class="field" style="margin-bottom:0"><label>Round rules — shown to players before the round starts</label>
@@ -1651,7 +1653,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="32";
+const FC_BUILD="33";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
