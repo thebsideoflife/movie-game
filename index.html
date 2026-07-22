@@ -1439,7 +1439,10 @@ function editQ(ri,qi){
   let fields="";
   if(t==="listReveal"){
     fields=`
-    ${f("Clues — one per line, revealed in this order","ta","f_clues",(q?q.clues.join("\n"):""))}
+    <div class="field span2"><label>Clues — revealed one at a time, in this order</label>
+      <div id="clwrap"></div>
+      <button type="button" class="btn btn-ghost btn-sm" style="margin-top:8px" onclick="clAdd()">+ add clue</button>
+    </div>
     ${f("Accepted answers — comma separated","in","f_answers",(q?q.answers.join(", "):""))}
     ${f("Display answer","in","f_display",v(q&&q.display))}
     ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}`;
@@ -1539,7 +1542,25 @@ function editQ(ri,qi){
     pcRender();
     pcStatus(PC.order.length?"custom reveal order saved with this question":"random order at play time (bottom rows last)");
   }
+  if(t==="listReveal"){
+    CLQ=(q&&q.clues&&q.clues.length)?q.clues.slice():["",""];
+    clRender();
+  }
 }
+let CLQ=[];
+function clRender(){
+  const w=document.getElementById("clwrap");if(!w)return;
+  w.innerHTML=CLQ.map((c,i)=>`
+    <div class="qrow">
+      <input type="text" value="${esc(c)}" placeholder="clue ${i+1}" style="flex:1;border:none;background:transparent;font-size:14px;font-family:inherit" oninput="CLQ[${i}]=this.value">
+      <button type="button" onclick="clMove(${i},-1)" title="Move up">↑</button>
+      <button type="button" onclick="clMove(${i},1)" title="Move down">↓</button>
+      <button type="button" onclick="clDel(${i})" title="Delete">🗑</button>
+    </div>`).join("")||'<p class="muted" style="font-size:13px">No clues yet — add one below.</p>';
+}
+function clAdd(){CLQ.push("");clRender();const w=document.getElementById("clwrap");if(w){const ins=w.querySelectorAll("input");if(ins.length)ins[ins.length-1].focus();}}
+function clDel(i){CLQ.splice(i,1);clRender();}
+function clMove(i,d){const j=i+d;if(j<0||j>=CLQ.length)return;[CLQ[i],CLQ[j]]=[CLQ[j],CLQ[i]];clRender();}
 let PC={order:[],manual:false};
 function pcImgSrc(){const vv=gv("f_img");if(vv)return imgSrc(vv);const e=document.getElementById("f_img");return e&&e.getAttribute("data-ref")?imgSrc(e.getAttribute("data-ref")):"";}
 function pcStatus(t){const e=document.getElementById("pcstatus");if(e)e.textContent=t;}
@@ -1608,7 +1629,7 @@ function saveQ(ri,qi){
   const r=C.rounds[ri],t=r.type;
   let q=null;
   try{
-    if(t==="listReveal")q={clues:gv("f_clues").split("\n").map(s=>s.trim()).filter(Boolean),answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
+    if(t==="listReveal")q={clues:CLQ.map(s=>(s||"").trim()).filter(Boolean),answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
     if(t==="quote")q={quote:gv("f_quote"),ask:gv("f_ask")||"Name the movie",answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
     if(t==="ordering"){
       const labels=gv("f_items").split("\n").map(s=>s.trim()).filter(Boolean);
@@ -1642,7 +1663,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="35";
+const FC_BUILD="36";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
