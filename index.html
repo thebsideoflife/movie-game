@@ -110,6 +110,15 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .chip.used{opacity:.25;pointer-events:none}
 .oghost{position:fixed;z-index:999;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.25);background:#fff;border:1.5px solid var(--red2)}
 
+/* live ordering — vertical drag-to-reorder list */
+.lolist{display:flex;flex-direction:column;gap:8px;max-width:440px;margin:16px auto}
+.lorow{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600;color:var(--text);box-shadow:0 2px 8px rgba(30,15,15,.05);touch-action:none;cursor:grab;user-select:none}
+.lorow .loh{color:#b9b3c4;font-size:16px;flex-shrink:0}
+.lorow .lonum{width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid rgba(214,34,28,.35);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--red);flex-shrink:0}
+.lorow .lolabel{flex:1;text-align:left}
+.lorow.dragover{border-color:var(--red2);background:#fff6f6}
+.lorow.ghost{position:fixed;z-index:999;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.28);opacity:.95}
+
 /* anagram */
 .scramble{font-family:'Anton',Impact,sans-serif;font-size:clamp(30px,8.5vw,46px);text-align:center;color:var(--red);letter-spacing:.05em;margin:10px 0 22px;text-transform:uppercase}
 .mask{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:clamp(18px,5vw,26px);letter-spacing:.18em;margin-bottom:18px;min-height:34px;word-break:break-word;color:var(--steel)}
@@ -1663,7 +1672,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="36";
+const FC_BUILD="37";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
@@ -1716,8 +1725,20 @@ function sfxSuspense(){[220,262,311,262,220,262,311,370].forEach((n,i)=>tone(n,i
 function sfxKaching(){tone(1568,0,.12);tone(2093,.09,.5);noiseBurst(0,.08,.15);}
 function sfxWhoosh(){noiseBurst(0,.55,.4);}
 function sfxTick(){tone(1000,0,.04,"square",.22);tone(760,.45,.04,"square",.22);}
+const SFX_FNS={sfxBuzzIn:1,sfxCorrect:1,sfxWrong:1,sfxTimesUp:1,sfxDrum:1,sfxTada:1,sfxIntro:1,sfxApplause:1,sfxBoo:1,sfxSadHorn:1,sfxSuspense:1,sfxKaching:1,sfxWhoosh:1,sfxTick:1};
+function hostSfx(name){
+  if(!SFX_FNS[name])return;
+  try{({sfxBuzzIn,sfxCorrect,sfxWrong,sfxTimesUp,sfxDrum,sfxTada,sfxIntro,sfxApplause,sfxBoo,sfxSadHorn,sfxSuspense,sfxKaching,sfxWhoosh,sfxTick})[name]();}catch(e){}
+  if(L&&L.role==="host"&&L.conns){
+    Object.values(L.conns).forEach(c=>{try{c.send({t:"sfx",name});}catch(e){}});
+  }
+}
+function playerSfx(name){
+  if(!SFX_FNS[name])return;
+  try{({sfxBuzzIn,sfxCorrect,sfxWrong,sfxTimesUp,sfxDrum,sfxTada,sfxIntro,sfxApplause,sfxBoo,sfxSadHorn,sfxSuspense,sfxKaching,sfxWhoosh,sfxTick})[name]();}catch(e){}
+}
 function sbHTML(){
-  const btn=(fn,ico,lab)=>`<button class="sbtn" onclick="${fn}()" title="${lab}"><span>${ico}</span>${lab}</button>`;
+  const btn=(fn,ico,lab)=>`<button class="sbtn" onclick="hostSfx('${fn}')" title="${lab}"><span>${ico}</span>${lab}</button>`;
   return `<div class="card" style="margin-top:12px;padding:12px 16px">
     <p class="colhead" style="margin-bottom:8px">🎛 soundboard</p>
     <div class="sbgrid">
@@ -1977,9 +1998,12 @@ function hostMsg(conn,d){
   if(d.t==="buzz"){
     if(L.mode==="timed")return;
     if(L.screen!=="question"||L.lockedBy||L.buzzedOut.includes(conn.peer)||!L.players[conn.peer])return;
-    L.lockedBy=conn.peer;stopLiveTimers();sfxBuzzIn();
-    if(d.text){
-      const q=L.game.rounds[L.ri].questions[L.qi];
+    L.lockedBy=conn.peer;stopLiveTimers();hostSfx("sfxBuzzIn");
+    const q=L.game.rounds[L.ri].questions[L.qi];
+    if(d.order){
+      const text=orderLabelText(q,d.order);
+      L.typedAnswer={name:(L.players[conn.peer]||{}).name||"?",text,order:d.order.slice(),ok:orderCorrectCount(d.order)===d.order.length};
+    }else if(d.text){
       const text=String(d.text).slice(0,120);
       L.typedAnswer={name:(L.players[conn.peer]||{}).name||"?",text,ok:(q&&q.answers&&q.answers.length)?isMatch(text,q.answers):null};
     }
@@ -2001,9 +2025,14 @@ function hostMsg(conn,d){
     if(L.mode==="timed"){
       if(L.screen!=="question"||!L.players[conn.peer])return;
       const q=L.game.rounds[L.ri].questions[L.qi];
-      const text=String(d.text||"").slice(0,120);
       if(!L.answers)L.answers={};
-      L.answers[conn.peer]={name:(L.players[conn.peer]||{}).name||"?",text,ok:(q&&q.answers&&q.answers.length)?isMatch(text,q.answers):null,awarded:null};
+      if(d.order){
+        const text=orderLabelText(q,d.order);
+        L.answers[conn.peer]={name:(L.players[conn.peer]||{}).name||"?",text,order:d.order.slice(),ok:orderCorrectCount(d.order)===d.order.length,awarded:null};
+      }else{
+        const text=String(d.text||"").slice(0,120);
+        L.answers[conn.peer]={name:(L.players[conn.peer]||{}).name||"?",text,ok:(q&&q.answers&&q.answers.length)?isMatch(text,q.answers):null,awarded:null};
+      }
       bcastView();renderLiveHost();
       return;
     }
@@ -2013,6 +2042,12 @@ function hostMsg(conn,d){
     L.typedAnswer={name:(L.players[conn.peer]||{}).name||"?",text,ok:(q&&q.answers&&q.answers.length)?isMatch(text,q.answers):null};
     bcastView();renderLiveHost();
   }
+}
+function orderLabelText(q,order){
+  return order.map((it,i)=>(i+1)+". "+((q.items[it]&&q.items[it].label)||"?")).join("   ");
+}
+function orderCorrectCount(order){
+  let c=0;order.forEach((it,i)=>{if(it===i)c++;});return c;
 }
 function viewPayload(){
   return {t:"view",v:{screen:L.screen,ri:L.ri,qi:L.qi,cluesShown:L.cluesShown,tiles:L.tiles,
@@ -2081,7 +2116,7 @@ function startQTimer(){
     L.timeLeft--;
     const e=document.getElementById("qtimersec");if(e)e.textContent=L.timeLeft;
     Object.values(L.conns).forEach(c=>{try{c.send({t:"tick",s:L.timeLeft});}catch(err){}});
-    if(L.timeLeft<=0){stopQTimer();sfxTimesUp();if(L.mode==="timed")liveEndTimed();else liveReveal();}
+    if(L.timeLeft<=0){stopQTimer();hostSfx("sfxTimesUp");if(L.mode==="timed")liveEndTimed();else liveReveal();}
   },1000);
 }
 function liveEndTimed(){
@@ -2096,7 +2131,7 @@ function liveTimedGrade(pid,frac){
   L.answers[pid]=a;
   const pts=Math.round(livePot()*frac);
   if(L.players[pid])L.players[pid].score+=pts;
-  if(frac>0)sfxCorrect();else sfxWrong();
+  if(frac>0)hostSfx("sfxCorrect");else hostSfx("sfxWrong");
   bcastView();renderLiveHost();
 }
 function hostAdvance(){
@@ -2141,13 +2176,13 @@ function liveAward(frac){
   if(!L.lockedBy)return;
   const pts=Math.max(1,Math.round(livePot()*frac));
   L.players[L.lockedBy].score+=pts;
-  sfxCorrect();
+  hostSfx("sfxCorrect");
   liveReveal();
 }
 function liveJudge(ok){
   if(!L.lockedBy)return;
   if(ok){liveAward(1);return;}
-  sfxWrong();
+  hostSfx("sfxWrong");
   L.buzzedOut.push(L.lockedBy);L.lockedBy=null;L.typedAnswer=null;if(L.auto)startLiveTimers();bcastView();renderLiveHost();
 }
 function liveRevealData(){
@@ -2176,7 +2211,7 @@ function liveScoresChips(v,buzzingName){
 function liveQHTML(r,q,v){
   if(r.type==="listReveal")return `<div class="clues">${q.clues.map((c,i)=>i<v.cluesShown?`<div class="clue">${esc(c)}</div>`:`<div class="clue hidden-clue">next clue soon…</div>`).join("")}</div>`;
   if(r.type==="quote")return `<div class="quotecard center"><p class="muted" style="font-size:14px;margin-bottom:12px">🤖 audio-only quote — listen closely</p><button class="btn btn-gold btn-sm" onclick="liveSpeakQuote()">🔊 Play the quote</button></div><div class="prompt" style="font-size:20px;margin-top:14px">${esc(q.ask||"Name the movie")}</div>`;
-  if(r.type==="ordering")return `<div class="prompt" style="font-size:21px">${esc(q.prompt)}</div><div class="pool">${(v.shuffled&&v.shuffled.length?v.shuffled:q.items.map((x,i)=>i)).map(i=>`<span class="chip">${esc(q.items[i].label)}</span>`).join("")}</div><p class="muted" style="margin-top:12px;font-size:13px">buzz in, then say the full order out loud</p>`;
+  if(r.type==="ordering")return `<div class="prompt" style="font-size:21px">${esc(q.prompt)}</div><div class="lolist">${(v.shuffled&&v.shuffled.length?v.shuffled:q.items.map((x,i)=>i)).map((i,pos)=>`<div class="lorow"><span class="lonum">${pos+1}</span><span class="lolabel">${esc(q.items[i].label)}</span></div>`).join("")}</div><p class="muted" style="margin-top:12px;font-size:13px">players drag to reorder on their phones, then ${v.mode==="timed"?"send":"buzz in"} when ready (shown here in starting order)</p>`;
   if(r.type==="merger")return `<div class="prompt" style="font-size:19px">Two movies share a word — name the <b>merged</b> title</div><div class="mrows">${mergerRowsHTML(q,v.cluesShown||1)}</div>`;
   if(r.type==="riddle")return `<div class="prompt">"${esc(q.prompt)}"</div>`;
   if(r.type==="anagram"){
@@ -2277,10 +2312,10 @@ function renderLiveHost(){
                 <button class="btn btn-gold btn-sm" onclick="liveEndTimed()">⏹ End &amp; grade now</button>
               </div>`
             : (L.lockedBy
-            ?`<p style="font-weight:800;font-size:17px;margin-bottom:6px">🔔 ${esc(buzzingName||"?")} buzzed${L.answerMode==="typed"?"!":" — answers out loud!"}</p>
-              ${L.answerMode==="typed"?(L.typedAnswer
-                ?`<p style="font-size:16px;margin-bottom:10px">typed: <b>“${esc(L.typedAnswer.text)}”</b> ${L.typedAnswer.ok===true?'<span style="color:var(--good);font-weight:800">· fuzzy match ✓</span>':L.typedAnswer.ok===false?'<span style="color:var(--bad);font-weight:800">· no match ✗</span>':""}</p>`
-                :`<p class="muted" style="margin-bottom:10px">waiting for their typed answer…</p>`):""}
+            ?`<p style="font-weight:800;font-size:17px;margin-bottom:6px">🔔 ${esc(buzzingName||"?")} buzzed${(L.answerMode==="typed"||r.type==="ordering")?"!":" — answers out loud!"}</p>
+              ${(L.answerMode==="typed"||r.type==="ordering")?(L.typedAnswer
+                ?`<p style="font-size:16px;margin-bottom:10px">${r.type==="ordering"?"their order":"typed"}: <b>“${esc(L.typedAnswer.text)}”</b> ${L.typedAnswer.ok===true?'<span style="color:var(--good);font-weight:800">· fuzzy match ✓</span>':L.typedAnswer.ok===false?'<span style="color:var(--bad);font-weight:800">· no match ✗</span>':""}</p>`
+                :`<p class="muted" style="margin-bottom:10px">waiting for their ${r.type==="ordering"?"order":"typed answer"}…</p>`):""}
               <div class="formactions" style="margin-top:0">
                 <button class="btn btn-gold btn-sm" onclick="liveAward(1)">✓ Full +${livePot()}</button>
                 <button class="btn btn-ghost btn-sm" onclick="liveAward(0.5)">½ Partial +${Math.max(1,Math.round(livePot()/2))}</button>
@@ -2361,6 +2396,7 @@ function playerMsg(d){
   if(!L||L.role!=="player"||!d)return;
   if(d.t==="tick"){const e=document.getElementById("qtimersec");if(e)e.textContent=d.s;return;}
   if(d.t==="welcome")L.game=d.game;
+  if(d.t==="sfx"){playerSfx(d.name);return;}
   if(d.t==="mic"){
     const has=V.stream&&V.stream.getAudioTracks&&V.stream.getAudioTracks().length>0;
     if(has)V.stream.getAudioTracks().forEach(t=>{t.enabled=!!d.on;});
@@ -2372,8 +2408,16 @@ function playerMsg(d){
   if(d.t==="view"){
     L.view=d.v;
     if(d.v.screen!=="question")L.buzzed=false;
+    const qkey=d.v.ri+"_"+d.v.qi;
+    if(d.v.screen==="question"&&L.ordQKey!==qkey){
+      const rr=L.game&&L.game.rounds[d.v.ri];
+      if(rr&&rr.type==="ordering"){
+        const qq=rr.questions[d.v.qi];
+        L.ordArr=(d.v.shuffled&&d.v.shuffled.length)?d.v.shuffled.slice():(qq?qq.items.map((x,i)=>i):[]);
+      }
+      L.ordQKey=qkey;
+    }
     if(d.v.mode==="timed"){
-      const qkey=d.v.ri+"_"+d.v.qi;
       if(d.v.screen==="question"&&L.answeredQKey!==qkey){L.sentAnswer=false;L.myLastAnswer=null;}
       if(d.v.screen==="question")L.answeredQKey=qkey;
     }else{
@@ -2422,6 +2466,34 @@ function renderLivePlayer(){
     body=`<div class="roundintro"><div class="num">Round ${v.ri+1}</div><h2 class="display">${esc(r?r.name:"")}</h2>
     <div class="rule">${r?(r.rule||""):""}</div><p class="muted">get your buzzer finger ready…</p>
     ${v.videoOn&&!V.stream&&((v.vparts||[]).length<5)?`<div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="playerStartVideo()">🎥 turn on my camera</button></div>`:""}</div>`;
+  }
+  else if(v.screen==="question"&&L.game&&L.game.rounds[v.ri]&&L.game.rounds[v.ri].type==="ordering"){
+    const r=L.game.rounds[v.ri],q=r.questions[v.qi];
+    const curArr=L.ordArr||(v.shuffled&&v.shuffled.length?v.shuffled:q.items.map((x,i)=>i));
+    let listHtml="",actionArea;
+    if(v.mode==="timed"){
+      listHtml=liveOrderRowsHTML(q,curArr);
+      actionArea=`<p class="muted" style="font-size:12.5px;margin-top:10px">${L.sentAnswer?"✅ order sent — drag to change your mind, then send again":"drag to arrange, then send — you can resend until time's up"}</p>
+        <div class="center" style="margin-top:10px"><button class="btn btn-gold" onclick="sendOrderAnswer()">${L.sentAnswer?"Send again":"Send my order"}</button></div>`;
+    }else{
+      const out=(v.buzzedOut||[]).includes(L.myId);
+      if(v.lockedId===L.myId)actionArea=`<div class="buzzmsg you" style="margin-top:14px">🔔 YOU'RE UP — host is checking your order…</div>`;
+      else if(v.lockedBy)actionArea=`<div class="buzzmsg" style="margin-top:14px">🔔 ${esc(v.lockedBy)} buzzed…${v.typed?`<br><span class="muted" style="font-size:14px">“${esc(v.typed.text)}”</span>`:""}</div>`;
+      else if(out)actionArea=`<div class="buzzmsg out" style="margin-top:14px">locked out of this one 😬</div>`;
+      else{
+        listHtml=liveOrderRowsHTML(q,curArr);
+        actionArea=`<div class="center" style="margin-top:14px"><button class="buzzbtn" onclick="buzzOrder()">BUZZ</button></div>`;
+      }
+    }
+    body=`<div class="qhead"><span class="qnum">R${v.ri+1} · Q${v.qi+1}</span>
+      <span style="display:flex;gap:8px;align-items:center">
+        <span class="potbadge">${v.pot} pts</span>
+        ${v.timeLeft!=null?`<span class="potbadge">⏱ <b id="qtimersec">${v.timeLeft}</b>s</span>`:""}
+      </span></div>
+      <div class="prompt" style="font-size:19px;text-align:center;margin-top:6px">${esc(q.prompt)}</div>
+      ${listHtml?`<p class="muted center" style="font-size:12.5px;margin-top:4px">drag any movie up or down to put them in order</p>`:""}
+      ${listHtml}
+      ${actionArea}`;
   }
   else if(v.screen==="question"&&v.mode==="timed"){
     const r=L.game&&L.game.rounds[v.ri],q=r&&r.questions[v.qi];
@@ -2495,6 +2567,70 @@ function renderLivePlayer(){
     const b=document.getElementById("buzzbtn");
     if(b)b.disabled=!ni.value.trim();
   }
+  if(v.screen==="question"&&L.game&&L.game.rounds[v.ri]&&L.game.rounds[v.ri].type==="ordering")initLiveOrderDnD();
+}
+function liveOrderRowsHTML(q,arr){
+  return `<div class="lolist">${arr.map((it,i)=>`<div class="lorow" data-lorow="${i}"><span class="loh">⠿</span><span class="lonum">${i+1}</span><span class="lolabel">${esc((q.items[it]&&q.items[it].label)||"?")}</span></div>`).join("")}</div>`;
+}
+let LOD=null;
+function initLiveOrderDnD(){
+  document.querySelectorAll("[data-lorow]").forEach(el=>{
+    el.style.touchAction="none";
+    el.onpointerdown=e=>{
+      LOD={idx:parseInt(el.getAttribute("data-lorow")),x0:e.clientX,y0:e.clientY,moved:false,ghost:null,el:el};
+      try{el.setPointerCapture&&el.setPointerCapture(e.pointerId);}catch(err){}
+    };
+    el.onpointermove=e=>{
+      if(!LOD||LOD.el!==el)return;
+      const dx=e.clientX-LOD.x0,dy=e.clientY-LOD.y0;
+      if(!LOD.moved&&Math.hypot(dx,dy)>8){
+        LOD.moved=true;
+        const g=el.cloneNode(true);g.classList.add("ghost");
+        const rect=el.getBoundingClientRect();
+        g.style.width=rect.width+"px";
+        document.body.appendChild(g);LOD.ghost=g;
+        el.style.opacity=".3";
+      }
+      if(LOD.moved&&LOD.ghost){
+        LOD.ghost.style.left=(e.clientX-LOD.ghost.offsetWidth/2)+"px";
+        LOD.ghost.style.top=(e.clientY-24)+"px";
+        document.querySelectorAll("[data-lorow]").forEach(row=>row.classList.remove("dragover"));
+        const t=document.elementFromPoint(e.clientX,e.clientY);
+        const row=t&&t.closest?t.closest("[data-lorow]"):null;
+        if(row&&row!==el)row.classList.add("dragover");
+      }
+    };
+    el.onpointerup=e=>{
+      if(!LOD||LOD.el!==el)return;
+      const d=LOD;LOD=null;
+      if(d.ghost)d.ghost.remove();
+      el.style.opacity="";
+      if(!d.moved)return;
+      const t=document.elementFromPoint(e.clientX,e.clientY);
+      const row=t&&t.closest?t.closest("[data-lorow]"):null;
+      if(row&&L.ordArr){
+        const to=parseInt(row.getAttribute("data-lorow"));
+        if(to!==d.idx){
+          const item=L.ordArr.splice(d.idx,1)[0];
+          L.ordArr.splice(to,0,item);
+        }
+      }
+      renderLivePlayer();
+    };
+    el.onpointercancel=()=>{if(LOD&&LOD.el===el){if(LOD.ghost)LOD.ghost.remove();LOD=null;renderLivePlayer();}};
+  });
+}
+function buzzOrder(){
+  if(!L||L.buzzed||!L.conn)return;
+  L.buzzed=true;
+  try{L.conn.send({t:"buzz",order:(L.ordArr||[]).slice()});}catch(e){}
+  renderLivePlayer();
+}
+function sendOrderAnswer(){
+  if(!L||!L.conn)return;
+  L.sentAnswer=true;
+  try{L.conn.send({t:"answer",order:(L.ordArr||[]).slice()});}catch(e){}
+  renderLivePlayer();
 }
 
 /* ---------- boot ---------- */
