@@ -3,15 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Final Cut — movie trivia</title>
+<title>GameShown — trivia for anything</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Anton&family=Fraunces:ital,wght@0,600;1,500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#faf9fb; --panel:#ffffff; --panel2:#f3f1f6; --line:#e5e2ea;
-  --red:#d6221c; --red2:#ef4136; --glow:rgba(214,34,28,.22);
-  --steel:#3a3542; --text:#221f28; --muted:#6f6a7a;
+  --bg:#fdf8f3; --panel:#ffffff; --panel2:#f7eee1; --line:#ecdcc5;
+  --red:#e8541c; --red2:#ffb627; --glow:rgba(232,84,28,.22);
+  --steel:#16233d; --text:#221f28; --muted:#6f6a7a;
   --good:#16a34a; --bad:#dc2626; --radius:18px;
 }
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
@@ -36,7 +36,7 @@ input,textarea,select{font-family:inherit;font-size:16px}
 .btn-sm{padding:9px 16px;font-size:12.5px}
 .btn[disabled]{opacity:.4;pointer-events:none}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:22px;box-shadow:0 6px 24px rgba(30,15,15,.06)}
-.tag{display:inline-block;padding:4px 12px;border-radius:6px;font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:rgba(214,34,28,.08);color:var(--red);border:1px solid rgba(214,34,28,.25)}
+.tag{display:inline-block;padding:4px 12px;border-radius:6px;font-size:11.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;background:rgba(232,84,28,.08);color:var(--red);border:1px solid rgba(232,84,28,.25)}
 .muted{color:var(--muted)}
 .center{text-align:center}
 input[type=text],textarea,select{width:100%;background:#fff;border:1px solid var(--line);border-radius:10px;color:var(--text);padding:13px 16px;outline:none}
@@ -45,7 +45,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 
 /* ---------- header / progress ---------- */
 .topbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:10px}
-.brand{font-family:'Anton',Impact,sans-serif;font-size:19px;color:var(--red);letter-spacing:.09em;cursor:pointer;text-transform:uppercase}
+.brand{font-family:'Anton',Impact,sans-serif;font-size:19px;color:var(--steel);letter-spacing:.09em;cursor:pointer;text-transform:uppercase}
 .scorepill{background:#fff;border:1px solid var(--line);border-radius:999px;padding:7px 14px;font-weight:700;font-size:14px;color:var(--steel)}
 .scorepill b{color:var(--red)}
 .progress{height:5px;background:#ecebf0;border-radius:99px;overflow:hidden;margin-bottom:22px}
@@ -53,7 +53,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 
 /* ---------- home ---------- */
 .hero{text-align:center;padding:26px 0 22px}
-.herologo{width:min(360px,78vw);filter:drop-shadow(0 16px 40px rgba(214,34,28,.30));margin-bottom:4px}
+.herologo{width:min(360px,78vw);filter:drop-shadow(0 16px 40px rgba(232,84,28,.30));margin-bottom:4px}
 .hero h1{font-family:'Anton',Impact,sans-serif;font-size:clamp(52px,13vw,74px);line-height:.95;text-transform:uppercase;color:var(--steel)}
 .hero h1 em{color:var(--red);font-style:normal}
 .hero .sub{color:var(--muted);letter-spacing:.5em;text-transform:uppercase;font-size:12px;font-weight:700;margin-top:10px}
@@ -61,7 +61,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .marquee{display:inline-block;border:2px solid var(--red);border-radius:10px;padding:6px 18px;margin-bottom:18px;color:var(--red);font-size:12px;font-weight:800;letter-spacing:.25em;text-transform:uppercase}
 .menu{display:grid;gap:14px;margin-top:8px}
 .menucard{display:flex;align-items:center;gap:16px;text-align:left;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:20px;color:var(--text);transition:.15s border-color,.15s box-shadow;box-shadow:0 4px 18px rgba(30,15,15,.05)}
-.menucard:hover{border-color:var(--red2);box-shadow:0 8px 28px rgba(214,34,28,.12)}
+.menucard:hover{border-color:var(--red2);box-shadow:0 8px 28px rgba(232,84,28,.12)}
 .menucard .ico{font-size:26px;width:52px;height:52px;display:flex;align-items:center;justify-content:center;background:var(--panel2);border-radius:12px;flex-shrink:0;border:1px solid var(--line)}
 .menucard h3{font-size:16.5px;margin-bottom:3px}
 .menucard p{font-size:13.5px;color:var(--muted);line-height:1.45}
@@ -77,7 +77,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 /* ---------- question ---------- */
 .qhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .qhead .qnum{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.14em;text-transform:uppercase}
-.potbadge{background:rgba(214,34,28,.07);border:1px solid rgba(214,34,28,.3);color:var(--red);font-weight:800;border-radius:8px;padding:6px 14px;font-size:14px;transition:.3s}
+.potbadge{background:rgba(232,84,28,.07);border:1px solid rgba(232,84,28,.3);color:var(--red);font-weight:800;border-radius:8px;padding:6px 14px;font-size:14px;transition:.3s}
 .prompt{font-family:'Fraunces',Georgia,serif;font-weight:600;font-size:clamp(22px,5.5vw,30px);line-height:1.25;margin-bottom:20px}
 .answerbar{display:flex;gap:10px;margin-top:20px}
 .answerbar input{flex:1}
@@ -103,7 +103,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .slots{display:grid;gap:8px;margin-bottom:18px}
 .slot{min-height:52px;border:1.5px dashed #d5d1dc;border-radius:10px;display:flex;align-items:center;padding:0 14px;gap:10px;color:var(--muted);font-size:14px;background:#fdfcfe}
 .slot.filled{border-style:solid;border-color:#cfc9d8;background:#fff;color:var(--text);font-size:16px;cursor:pointer;font-weight:600}
-.slot .idx{width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid rgba(214,34,28,.35);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--red);flex-shrink:0}
+.slot .idx{width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid rgba(232,84,28,.35);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--red);flex-shrink:0}
 .pool{display:flex;flex-wrap:wrap;gap:8px}
 .chip{background:#fff;border:1px solid var(--line);color:var(--text);border-radius:999px;padding:11px 18px;font-size:15px;font-weight:600;box-shadow:0 2px 8px rgba(30,15,15,.05)}
 .chip:hover{border-color:var(--red2)}
@@ -114,7 +114,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .lolist{display:flex;flex-direction:column;gap:8px;max-width:440px;margin:16px auto}
 .lorow{display:flex;align-items:center;gap:12px;background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:12px 14px;font-size:15px;font-weight:600;color:var(--text);box-shadow:0 2px 8px rgba(30,15,15,.05);touch-action:none;cursor:grab;user-select:none}
 .lorow .loh{color:#b9b3c4;font-size:16px;flex-shrink:0}
-.lorow .lonum{width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid rgba(214,34,28,.35);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--red);flex-shrink:0}
+.lorow .lonum{width:24px;height:24px;border-radius:50%;background:var(--panel2);border:1px solid rgba(232,84,28,.35);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:var(--red);flex-shrink:0}
 .lorow .lolabel{flex:1;text-align:left}
 .lorow.dragover{border-color:var(--red2);background:#fff6f6}
 .lorow.ghost{position:fixed;z-index:999;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.28);opacity:.95}
@@ -178,7 +178,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 @media(max-width:560px){.grid2{grid-template-columns:1fr}}
 .gtile,.rtile{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px;box-shadow:0 4px 18px rgba(30,15,15,.05);transition:.15s border-color,.15s box-shadow,.15s transform;position:relative}
-.gtile:hover,.rtile:hover{border-color:var(--red2);box-shadow:0 8px 28px rgba(214,34,28,.12)}
+.gtile:hover,.rtile:hover{border-color:var(--red2);box-shadow:0 8px 28px rgba(232,84,28,.12)}
 .rtile{cursor:pointer}
 .rtile.dragover{border-color:var(--red);box-shadow:0 0 0 3px var(--glow);transform:scale(1.02)}
 .rtile .drag{position:absolute;top:14px;right:14px;color:#b9b4c2;font-size:18px;cursor:grab;user-select:none}
@@ -197,7 +197,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .field label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px}
 .formactions{display:flex;gap:10px;margin-top:14px;flex-wrap:wrap}
 .exportbox{width:100%;height:110px;font-family:ui-monospace,monospace;font-size:11px}
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;box-shadow:0 8px 30px rgba(120,20,15,.35);z-index:99;animation:pop .3s ease}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-weight:700;padding:12px 22px;border-radius:999px;box-shadow:0 8px 30px rgba(150,70,10,.35);z-index:99;animation:pop .3s ease}
 
 .fab{position:fixed;bottom:22px;right:22px;width:58px;height:58px;border-radius:50%;background:linear-gradient(180deg,var(--red2),var(--red));color:#fff;font-size:25px;box-shadow:0 10px 28px var(--glow);z-index:90;display:flex;align-items:center;justify-content:center;border:none}
 .fab:hover{transform:scale(1.06)}
@@ -207,9 +207,9 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 @media(max-width:800px){.creatorcols{grid-template-columns:1fr}}
 .palette{display:grid;gap:8px;padding:2px}
 .pcard{background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:grab;box-shadow:0 3px 10px rgba(30,15,15,.04);transition:.15s transform,.15s border-color,.15s box-shadow;user-select:none;display:flex;gap:11px;align-items:center;text-align:left}
-.pcard:hover{border-color:var(--red2);transform:translateX(3px);box-shadow:0 8px 20px rgba(214,34,28,.12)}
+.pcard:hover{border-color:var(--red2);transform:translateX(3px);box-shadow:0 8px 20px rgba(232,84,28,.12)}
 .pcard:active{cursor:grabbing}
-.pcard .pico{font-size:19px;width:38px;height:38px;border-radius:10px;background:rgba(214,34,28,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.pcard .pico{font-size:19px;width:38px;height:38px;border-radius:10px;background:rgba(232,84,28,.08);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .pcard b{font-size:13.5px;display:block;margin-bottom:2px}
 .pcard p{font-size:11.5px;color:var(--muted);line-height:1.4}
 .dropslot{border:2px dashed #d5d1dc;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:8px;min-height:132px;color:var(--muted);font-weight:600;font-size:14px;transition:.15s;background:none}
@@ -219,7 +219,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .typechips{display:flex;flex-wrap:wrap;gap:8px}
 .typechip{background:#fff;border:1.5px solid var(--line);border-radius:10px;padding:9px 13px;font-size:13px;font-weight:600;color:var(--steel)}
 .typechip:hover{border-color:var(--red2)}
-.typechip.sel{border-color:var(--red);background:rgba(214,34,28,.07);color:var(--red)}
+.typechip.sel{border-color:var(--red);background:rgba(232,84,28,.07);color:var(--red)}
 
 /* live rooms */
 .buzzbtn{width:min(160px,42vw);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--red2),var(--red) 70%);color:#fff;font-family:'Anton',Impact,sans-serif;font-size:26px;letter-spacing:.06em;box-shadow:0 12px 32px var(--glow),inset 0 -6px 18px rgba(0,0,0,.25);border:5px solid #fff}
@@ -241,7 +241,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .qform .span2{grid-column:1/-1}
 @media(max-width:700px){.qform{grid-template-columns:1fr}}
 .pctile{background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.75);color:#fff;font-weight:800;font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer;text-shadow:0 1px 3px rgba(0,0,0,.9)}
-.pctile.num{background:rgba(214,34,28,.5)}
+.pctile.num{background:rgba(232,84,28,.5)}
 .sbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(86px,1fr));gap:6px}
 .sbtn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:8px 4px;font-size:10.5px;font-weight:700;color:var(--steel);display:flex;flex-direction:column;align-items:center;gap:2px}
 .sbtn span{font-size:18px}
@@ -308,7 +308,7 @@ const IMG = {
 
 /* ---------- S1E1 game data ---------- */
 const GAME_S1E1 = {
-  title:"Final Cut — S1E1", author:"jeremy",
+  title:"GameShown — S1E1", author:"jeremy",
   rounds:[
   { name:"new game, who dis?", type:"listReveal",
     rule:"Movies appear one at a time — they all star the same actor. The sooner you answer, the more points. Starts at <b>10 pts</b>, drops with every reveal.",
@@ -577,7 +577,7 @@ function render(){
   const g=S.game;
   const head=`
     <div class="topbar">
-      <div class="brand" onclick="goHome()">Final Cut</div>
+      <div class="brand" onclick="goHome()">GameShown</div>
       <div style="display:flex;gap:8px;align-items:center">
         <div class="scorepill">score <b>${S.score}</b></div>
         <button class="btn btn-ghost btn-sm" onclick="goHome()" title="Exit game">← back</button>
@@ -600,9 +600,9 @@ function renderHome(){
   const hasLogo=IMG.logo&&!IMG.logo.startsWith("__");
   app().innerHTML=`
   <div class="hero">
-    ${hasLogo?`<img class="herologo" src="${IMG.logo}" alt="FINAL CUT — movie trivia">`
-             :`<div class="marquee">Now Showing</div><h1>Final <em>Cut</em></h1><div class="sub">movie trivia</div>`}
-    <p>ten rounds. zero mercy. all movies.</p>
+    ${hasLogo?`<img class="herologo" src="${IMG.logo}" alt="GAMESHOWN — trivia for anything">`
+             :`<div class="marquee">On The Air</div><h1>Game<em>Shown</em></h1><div class="sub">trivia for anything</div>`}
+    <p>ten rounds. zero mercy. any topic.</p>
   </div>
   <div class="menu">
     <button class="menucard" onclick="startGame(GAME_S1E1)">
@@ -760,14 +760,14 @@ function renderQuestion(head){
         <button class="btn btn-gold" onclick="speakQuote()">🔊 Play the quote</button>
         <button class="speakbtn" style="margin-left:8px" onclick="speakQuote()">↻ replay</button>
       </div>
-      <div class="prompt" style="font-size:20px;margin-top:16px">${esc(q.ask||"Name the movie")}</div>`
+      <div class="prompt" style="font-size:20px;margin-top:16px">${esc(q.ask||"Name the answer")}</div>`
       +answerBarHTML();
   }
   else if(r.type==="ordering"){
     const slots=[0,1,2,3].map(i=>{
       const it=RT.order[i];
       return it==null
-        ?`<div class="slot" data-slotidx="${i}"><span class="idx">${i+1}</span>drag a movie here (or tap below)</div>`
+        ?`<div class="slot" data-slotidx="${i}"><span class="idx">${i+1}</span>drag an item here (or tap below)</div>`
         :`<div class="slot filled" data-slotidx="${i}" data-oitem="${it}" data-oslot="${i}"><span class="idx">${i+1}</span>${esc(q.items[it].label)} <span class="muted" style="margin-left:auto;font-size:12px">drag · tap to remove</span></div>`;
     }).join("");
     const chips=RT.pool.map(i=>
@@ -781,7 +781,7 @@ function renderQuestion(head){
       </div>`;
   }
   else if(r.type==="riddle"){
-    body=qheadHTML()+`<div class="prompt">"${esc(q.prompt)}"</div>`+answerBarHTML("the real title...");
+    body=qheadHTML()+`<div class="prompt">"${esc(q.prompt)}"</div>`+answerBarHTML("the real answer...");
   }
   else if(r.type==="anagram"){
     body=qheadHTML()+`
@@ -789,27 +789,27 @@ function renderQuestion(head){
       <div class="mask" id="mask">${anagramMask(q)}</div>
       <div class="center" style="margin-bottom:14px">
         <button class="btn btn-ghost btn-sm" id="hintbtn" onclick="takeHint()" ${RT.hints>=3?"disabled":""}>💡 hint (−2 pts)</button>
-      </div>`+answerBarHTML("unscrambled title...");
+      </div>`+answerBarHTML("unscrambled answer...");
   }
   else if(r.type==="math"){
     const rows=q.parts.map((p,i)=>`
       ${i>0?`<div class="mathop">${i===1?esc(q.op):"="}</div>`:""}
       <div class="mathrow">
         <div class="clue-t">${esc(p.clue)}</div>
-        <input type="text" id="m${i}" placeholder="movie title..." autocomplete="off">
+        <input type="text" id="m${i}" placeholder="your answer..." autocomplete="off">
       </div>`).join("");
     body=qheadHTML("15 pts")+`
-      <div class="prompt" style="font-size:19px">Solve the movie math — name all three:</div>
+      <div class="prompt" style="font-size:19px">Solve the math — name all three:</div>
       ${rows}
       <div class="center" style="margin-top:18px"><button class="btn btn-gold" onclick="submitMath()">Buzz</button></div>`;
   }
   else if(r.type==="twins"){
     body=qheadHTML("5 + 5 pts")+`
       <div class="prompt">${esc(q.prompt)}</div>
-      <p class="muted" style="font-size:14px">Two different movies, same year, same idea. Name both (either order).</p>
+      <p class="muted" style="font-size:14px">Two different answers, same set, same idea. Name both (either order).</p>
       <div class="twininputs">
-        <input type="text" id="t0" placeholder="movie #1..." autocomplete="off">
-        <input type="text" id="t1" placeholder="movie #2..." autocomplete="off">
+        <input type="text" id="t0" placeholder="answer #1..." autocomplete="off">
+        <input type="text" id="t1" placeholder="answer #2..." autocomplete="off">
       </div>
       <div class="center" style="margin-top:18px"><button class="btn btn-gold" onclick="submitTwins()">Buzz</button></div>`;
   }
@@ -818,7 +818,7 @@ function renderQuestion(head){
       <div class="piecebox">
         <img src="${imgSrc(q.img)}" alt="">
         <div class="tilegrid" id="tiles">${tilesHTML()}</div>
-      </div>`+answerBarHTML("name the movie...");
+      </div>`+answerBarHTML("name the answer...");
   }
   app().innerHTML=head+body;
   if(r.type==="ordering")initOrderDnD();
@@ -890,7 +890,7 @@ function cluesHTML(q){
     :`<div class="clue hidden-clue">next clue soon…</div>`).join("");
 }
 function mergerRowsHTML(q,shown){
-  const rows=[["about",q.a.hint,q.b.hint],["released",q.a.year,q.b.year],["co-star",q.a.actor1,q.b.actor1],["co-star",q.a.actor2,q.b.actor2]];
+  const rows=[["about",q.a.hint,q.b.hint],["year",q.a.year,q.b.year],["linked to",q.a.actor1,q.b.actor1],["linked to",q.a.actor2,q.b.actor2]];
   const head=`<div class="mrow mhead"><div class="mcell">🎬 movie one</div><div class="mcell">🎬 movie two</div></div>`;
   return head+rows.map((r,i)=> i<shown
     ?`<div class="mrow"><div class="mcell"><div class="mlabel">${r[0]}</div>${esc(r[1]||"")}</div><div class="mcell"><div class="mlabel">${r[0]}</div>${esc(r[2]||"")}</div></div>`
@@ -1111,16 +1111,27 @@ function shareScore(maxAll){
    CREATOR
    ===================================================== */
 const TYPE_META={
-  listReveal:{label:"Progressive reveal", icon:"🎞️", hint:"Clues appear one by one (actor filmography, movie facts...)"},
-  quote:{label:"Quote", icon:"💬", hint:"Iconic line + what you're asking for"},
-  ordering:{label:"Put in order", icon:"🔢", hint:"4 movies ordered by a stat"},
-  riddle:{label:"Reworded title", icon:"🙃", hint:"A title said very unhelpfully"},
-  anagram:{label:"Title scramble", icon:"🔀", hint:"Anagram of a movie title"},
-  math:{label:"Movie math", icon:"➗", hint:"Three number-titles that do math"},
-  twins:{label:"Twin films", icon:"👯", hint:"Two same-idea movies, same year"},
-  pieces:{label:"Poster pieces", icon:"🧩", hint:"Poster revealed tile by tile"},
-  merger:{label:"Title merger", icon:"🔗", hint:"Two titles fused by a shared word — clues reveal side by side"}
+  listReveal:{label:"Progressive reveal", icon:"🎞️", hint:"Clues appear one by one (bio facts, stats, trivia...)"},
+  quote:{label:"Quote", icon:"💬", hint:"Iconic line/lyric + what you're asking for"},
+  ordering:{label:"Put in order", icon:"🔢", hint:"4 items ordered by a stat"},
+  riddle:{label:"Reworded answer", icon:"🙃", hint:"The answer said very unhelpfully"},
+  anagram:{label:"Scramble", icon:"🔀", hint:"Anagram of the answer"},
+  math:{label:"Number math", icon:"➗", hint:"Three numeric clues that do math"},
+  twins:{label:"Matching pair", icon:"👯", hint:"Two same-idea answers, same year/set"},
+  pieces:{label:"Picture pieces", icon:"🧩", hint:"Image revealed tile by tile"},
+  merger:{label:"Answer merger", icon:"🔗", hint:"Two answers fused by a shared word — clues reveal side by side"}
 };
+function typeLabel(t,game){
+  game=game||C;
+  const custom=game&&game.typeLabels&&game.typeLabels[t];
+  return custom||TYPE_META[t].label;
+}
+function setTypeLabel(t,val){
+  C.typeLabels=C.typeLabels||{};
+  val=(val||"").trim();
+  if(val)C.typeLabels[t]=val;else delete C.typeLabels[t];
+  persistC();renderCreator();
+}
 const DB={
   load(){try{return JSON.parse(localStorage.getItem("fc_games")||"[]")}catch(e){return[]}},
   save(l){try{localStorage.setItem("fc_games",JSON.stringify(l))}catch(e){toast("Couldn't save — storage full?")}}
@@ -1153,7 +1164,7 @@ function renderAdmin(){
       </div>
     </div>`;}).join("");
   app().innerHTML=`
-  <div class="topbar"><div class="brand" onclick="S=null;C=null;render()">Final Cut</div>
+  <div class="topbar"><div class="brand" onclick="S=null;C=null;render()">GameShown</div>
     <button class="btn btn-ghost btn-sm" onclick="S=null;render()">← Home</button></div>
   <div class="crhead"><h2 class="display" style="font-size:26px">Admin portal</h2><span class="tag">saved in this browser</span></div>
   <div class="grid2 glib" style="margin-bottom:14px">
@@ -1190,7 +1201,7 @@ function renderCreator(){
       ondragstart="dragType='${t}'" ondragend="dragType=null"
       onclick="paletteAdd('${t}')" title="drag into your lineup — or tap to add">
       <div class="pico">${TYPE_META[t].icon}</div>
-      <div><b>${TYPE_META[t].label}</b>
+      <div><b>${typeLabel(t)}</b>
       <p>${TYPE_META[t].hint}</p></div>
     </div>`).join("");
   const tiles=C.rounds.map((r,ri)=>`
@@ -1202,7 +1213,7 @@ function renderCreator(){
       <span class="drag" title="drag to reorder">⠿</span>
       <span class="tag">R${ri+1}</span> <span class="ticon">${TYPE_META[r.type].icon}</span>
       <h3>${esc(r.name||"untitled round")}</h3>
-      <div class="tilemeta">${TYPE_META[r.type].label} · ${r.questions.length} question${r.questions.length===1?"":"s"}</div>
+      <div class="tilemeta">${typeLabel(r.type)} · ${r.questions.length} question${r.questions.length===1?"":"s"}</div>
       <div class="tileactions" onclick="event.stopPropagation()">
         <button onclick="renderRoundEditor(${ri})">✏️ edit</button>
         <button title="Duplicate round" onclick="dupRound(${ri})">⧉</button>
@@ -1213,7 +1224,7 @@ function renderCreator(){
     </div>`).join("");
   app().innerHTML=`
   <div class="topbar">
-    <div class="brand" onclick="S=null;C=null;render()">Final Cut</div>
+    <div class="brand" onclick="S=null;C=null;render()">GameShown</div>
     <button class="btn btn-ghost btn-sm" onclick="renderAdmin()">← all games</button>
   </div>
   <div class="crhead">
@@ -1224,6 +1235,17 @@ function renderCreator(){
     <div class="field"><label>Game title</label><input type="text" value="${esc(C.title)}" onchange="C.title=this.value;persistC();renderCreator()"></div>
     <div class="field" style="margin-bottom:0"><label>Host / author</label><input type="text" value="${esc(C.author)}" onchange="C.author=this.value;persistC()" placeholder="you"></div>
   </div>
+  <details class="card" style="margin-bottom:16px">
+    <summary style="cursor:pointer;font-weight:700;font-size:14px">✏️ Rename categories for this game</summary>
+    <p class="muted" style="font-size:12.5px;margin:10px 2px 12px">Give each category a name that fits your theme (e.g. "Quote" → "Lyrics", "Number math" → "Album sales"). Leave blank to use the default.</p>
+    <div class="grid2">
+      ${Object.keys(TYPE_META).map(t=>`
+      <div class="field" style="margin-bottom:0">
+        <label>${TYPE_META[t].icon} default: ${TYPE_META[t].label}</label>
+        <input type="text" placeholder="${TYPE_META[t].label}" value="${esc((C.typeLabels&&C.typeLabels[t])||"")}" onchange="setTypeLabel('${t}',this.value)">
+      </div>`).join("")}
+    </div>
+  </details>
   <div class="creatorcols">
     <div>
       <h3 style="margin:2px 2px 6px">Round types</h3>
@@ -1254,8 +1276,8 @@ function renderCreator(){
 }
 let dragType=null;
 function paletteAdd(t){
-  C.rounds.push({name:TYPE_META[t].label.toLowerCase(),type:t,rule:"",questions:[]});
-  persistC();renderCreator();toast(TYPE_META[t].icon+" "+TYPE_META[t].label+" added");
+  C.rounds.push({name:typeLabel(t).toLowerCase(),type:t,rule:"",questions:[]});
+  persistC();renderCreator();toast(TYPE_META[t].icon+" "+typeLabel(t)+" added");
 }
 function slotDrop(){
   if(dragType){const t=dragType;dragType=null;paletteAdd(t);return;}
@@ -1266,7 +1288,7 @@ function tileDrop(target){
     const t=dragType;dragType=null;
     const r=C.rounds[target];
     if(r.type===t){renderCreator();return;}
-    if(r.questions.length&&!confirm("Turn this round into "+TYPE_META[t].label+"? Its questions will be cleared.")){renderCreator();return;}
+    if(r.questions.length&&!confirm("Turn this round into "+typeLabel(t)+"? Its questions will be cleared.")){renderCreator();return;}
     r.type=t;r.questions=[];persistC();renderCreator();return;
   }
   dropRound(target);
@@ -1290,7 +1312,7 @@ function renderRoundEditor(ri){
   const r=C.rounds[ri];
   app().innerHTML=`
   <div class="topbar">
-    <div class="brand" onclick="S=null;C=null;render()">Final Cut</div>
+    <div class="brand" onclick="S=null;C=null;render()">GameShown</div>
     <button class="btn btn-ghost btn-sm" onclick="renderCreator()">← ${esc(C.title||"game")}</button>
   </div>
   <div class="crhead">
@@ -1302,7 +1324,7 @@ function renderRoundEditor(ri){
     <div class="field"><label>Round name</label><input type="text" value="${esc(r.name)}" onchange="C.rounds[${ri}].name=this.value;persistC()"></div>
     <div class="field"><label>Round type — tap to change</label>
       <div class="typechips">
-        ${Object.keys(TYPE_META).map(t=>`<button class="typechip ${r.type===t?"sel":""}" onclick="changeType(${ri},'${t}')">${TYPE_META[t].icon} ${TYPE_META[t].label}</button>`).join("")}
+        ${Object.keys(TYPE_META).map(t=>`<button class="typechip ${r.type===t?"sel":""}" onclick="changeType(${ri},'${t}')">${TYPE_META[t].icon} ${typeLabel(t)}</button>`).join("")}
       </div>
       <p class="muted" style="font-size:12.5px;margin-top:8px">${TYPE_META[r.type].hint}</p>
     </div>
@@ -1339,7 +1361,7 @@ function delRound(i){if(confirm("Delete this round?")){C.rounds.splice(i,1);pers
 function changeType(ri,t){
   const r=C.rounds[ri];
   if(r.type===t)return;
-  if(r.questions.length&&!confirm("Turn this round into "+TYPE_META[t].label+"? Its questions will be cleared.")){renderRoundEditor(ri);return;}
+  if(r.questions.length&&!confirm("Turn this round into "+typeLabel(t)+"? Its questions will be cleared.")){renderRoundEditor(ri);return;}
   r.type=t;r.questions=[];persistC();renderRoundEditor(ri);
 }
 function testPlay(){
@@ -1493,15 +1515,15 @@ function editQ(ri,qi){
   }else if(t==="quote"){
     fields=`
     ${f("The quote","ta","f_quote",v(q&&q.quote))}
-    ${f("What are you asking? (e.g. Name the movie)","in","f_ask",v(q&&q.ask))}
+    ${f("What are you asking? (e.g. Name the answer)","in","f_ask",v(q&&q.ask))}
     ${f("Accepted answers — comma separated","in","f_answers",(q?q.answers.join(", "):""))}
     ${f("Display answer","in","f_display",v(q&&q.display))}
     ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}`;
   }else if(t==="ordering"){
     fields=`
-    ${f("Prompt (e.g. Order by release date, earliest first)","in","f_prompt",v(q&&q.prompt))}
+    ${f("Prompt (e.g. Order by year, earliest first)","in","f_prompt",v(q&&q.prompt))}
     ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}
-    <div class="field"><label>Movies in the CORRECT order — one per line (players see them shuffled)</label>
+    <div class="field"><label>Items in the CORRECT order — one per line (players see them shuffled)</label>
       <textarea id="f_items" rows="6">${q?esc(q.items.map(it=>it.label).join("\n")):""}</textarea></div>
     <div class="field"><label>Answer shown for each — year, box office, wins… (one per line, matches left)</label>
       <textarea id="f_notes" rows="6">${q?esc(q.items.map(it=>it.note||"").join("\n")):""}</textarea></div>`;
@@ -1526,32 +1548,32 @@ function editQ(ri,qi){
   }else if(t==="twins"){
     fields=`
     ${f("Prompt (e.g. 1998: devastating asteroids)","in","f_prompt",v(q&&q.prompt))}
-    ${f("Movie A — accepted answers (comma sep)","in","f_aa",q?q.a.answers.join(", "):"")}
-    ${f("Movie A — display","in","f_ad",v(q&&q.a.display))}
-    ${f("Movie A — poster URL (optional, 🎬 research → 🖼 Use this poster)","in","f_ai",v(q&&q.a.img&&!IMG[q.a.img]?q.a.img:""))}
-    ${f("Movie B — accepted answers","in","f_ba",q?q.b.answers.join(", "):"")}
-    ${f("Movie B — display","in","f_bd",v(q&&q.b.display))}
-    ${f("Movie B — poster URL (optional, 🎬 research → 🖼 Use this poster)","in","f_bi",v(q&&q.b.img&&!IMG[q.b.img]?q.b.img:""))}
+    ${f("Item A — accepted answers (comma sep)","in","f_aa",q?q.a.answers.join(", "):"")}
+    ${f("Item A — display","in","f_ad",v(q&&q.a.display))}
+    ${f("Item A — image URL (optional; 🎬 research → 🖼 Use this poster)","in","f_ai",v(q&&q.a.img&&!IMG[q.a.img]?q.a.img:""))}
+    ${f("Item B — accepted answers","in","f_ba",q?q.b.answers.join(", "):"")}
+    ${f("Item B — display","in","f_bd",v(q&&q.b.display))}
+    ${f("Item B — image URL (optional; 🎬 research → 🖼 Use this poster)","in","f_bi",v(q&&q.b.img&&!IMG[q.b.img]?q.b.img:""))}
     ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}`;
   }else if(t==="merger"){
     const A=q&&q.a,B=q&&q.b;
     fields=`
-    ${f("Merged title — display answer (e.g. Days of Thunder Force)","in","f_display",v(q&&q.display))}
+    ${f("Merged answer — display (e.g. Days of Thunder Force)","in","f_display",v(q&&q.display))}
     ${f("Accepted answers — comma separated","in","f_answers",(q?q.answers.join(", "):""))}
-    ${f("Movie ONE title (e.g. Days of Thunder)","in","f_lt",v(q&&q.left))}
-    ${f("Movie TWO title (e.g. Thunder Force)","in","f_rt",v(q&&q.right))}
-    ${f("Movie ONE — a line about it","ta","f_ah",v(A&&A.hint))}
-    ${f("Movie ONE — release year","in","f_ay",v(A&&A.year))}
-    ${f("Movie ONE — an actor","in","f_a1",v(A&&A.actor1))}
-    ${f("Movie ONE — another actor","in","f_a2",v(A&&A.actor2))}
-    ${f("Movie TWO — a line about it","ta","f_bh",v(B&&B.hint))}
-    ${f("Movie TWO — release year","in","f_by",v(B&&B.year))}
-    ${f("Movie TWO — an actor","in","f_b1",v(B&&B.actor1))}
-    ${f("Movie TWO — another actor","in","f_b2",v(B&&B.actor2))}
+    ${f("Item ONE (e.g. Days of Thunder)","in","f_lt",v(q&&q.left))}
+    ${f("Item TWO (e.g. Thunder Force)","in","f_rt",v(q&&q.right))}
+    ${f("Item ONE — a line about it","ta","f_ah",v(A&&A.hint))}
+    ${f("Item ONE — year","in","f_ay",v(A&&A.year))}
+    ${f("Item ONE — a related name (e.g. co-star, teammate)","in","f_a1",v(A&&A.actor1))}
+    ${f("Item ONE — another related name","in","f_a2",v(A&&A.actor2))}
+    ${f("Item TWO — a line about it","ta","f_bh",v(B&&B.hint))}
+    ${f("Item TWO — year","in","f_by",v(B&&B.year))}
+    ${f("Item TWO — a related name","in","f_b1",v(B&&B.actor1))}
+    ${f("Item TWO — another related name","in","f_b2",v(B&&B.actor2))}
     ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}`;
   }else if(t==="pieces"){
     fields=`
-    ${f("Poster image — paste a URL, or use 🎬 research → 🖼 Use this poster","in","f_img",v(q&&q.img&&!IMG[q.img]?q.img:""))}
+    ${f("Image — paste a URL, or use 🎬 research → 🖼 Use this poster","in","f_img",v(q&&q.img&&!IMG[q.img]?q.img:""))}
     ${f("Accepted answers — comma separated","in","f_answers",(q?q.answers.join(", "):""))}
     ${f("Display answer","in","f_display",v(q&&q.display))}
     ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}
@@ -1566,10 +1588,10 @@ function editQ(ri,qi){
     </div>`;
   }
   app().innerHTML=`
-  <div class="topbar"><div class="brand">Final Cut</div>
+  <div class="topbar"><div class="brand">GameShown</div>
     <button class="btn btn-ghost btn-sm" onclick="renderRoundEditor(${ri})">← back</button></div>
   <div class="card">
-    <div class="tag" style="margin-bottom:14px">${TYPE_META[t].icon} ${TYPE_META[t].label}</div>
+    <div class="tag" style="margin-bottom:14px">${TYPE_META[t].icon} ${typeLabel(t)}</div>
     <div class="qform">${fields}</div>
     <div class="formactions">
       <button class="btn btn-gold" onclick="saveQ(${ri},${qi})">Save question</button>
@@ -1674,7 +1696,7 @@ function saveQ(ri,qi){
   let q=null;
   try{
     if(t==="listReveal")q={clues:CLQ.map(s=>(s||"").trim()).filter(Boolean),answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
-    if(t==="quote")q={quote:gv("f_quote"),ask:gv("f_ask")||"Name the movie",answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
+    if(t==="quote")q={quote:gv("f_quote"),ask:gv("f_ask")||"Name the answer",answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
     if(t==="ordering"){
       const labels=gv("f_items").split("\n").map(s=>s.trim()).filter(Boolean);
       const notes=gv("f_notes").split("\n").map(s=>s.trim());
@@ -1707,7 +1729,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="38";
+const FC_BUILD="39";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
@@ -2016,7 +2038,7 @@ function renderLiveEntry(){
   window.scrollTo(0,0);setWide(false);liveLeave();
   const games=DB.load();
   app().innerHTML=`
-  <div class="topbar"><div class="brand" onclick="S=null;render()">Final Cut</div>
+  <div class="topbar"><div class="brand" onclick="S=null;render()">GameShown</div>
     <button class="btn btn-ghost btn-sm" onclick="S=null;render()">← Home</button></div>
   <div class="crhead"><h2 class="display" style="font-size:26px">Live room</h2><span class="tag">beta</span></div>
   <div class="card" style="margin-bottom:14px">
@@ -2306,7 +2328,7 @@ function liveScoresChips(v,buzzingName){
 }
 function liveQHTML(r,q,v){
   if(r.type==="listReveal")return `<div class="clues">${q.clues.map((c,i)=>i<v.cluesShown?`<div class="clue">${esc(c)}</div>`:`<div class="clue hidden-clue">next clue soon…</div>`).join("")}</div>`;
-  if(r.type==="quote")return `<div class="quotecard center"><p class="muted" style="font-size:14px;margin-bottom:12px">🤖 audio-only quote — listen closely</p><button class="btn btn-gold btn-sm" onclick="liveSpeakQuote()">🔊 Play the quote</button></div><div class="prompt" style="font-size:20px;margin-top:14px">${esc(q.ask||"Name the movie")}</div>`;
+  if(r.type==="quote")return `<div class="quotecard center"><p class="muted" style="font-size:14px;margin-bottom:12px">🤖 audio-only quote — listen closely</p><button class="btn btn-gold btn-sm" onclick="liveSpeakQuote()">🔊 Play the quote</button></div><div class="prompt" style="font-size:20px;margin-top:14px">${esc(q.ask||"Name the answer")}</div>`;
   if(r.type==="ordering")return `<div class="prompt" style="font-size:21px">${esc(q.prompt)}</div><div class="lolist">${(v.shuffled&&v.shuffled.length?v.shuffled:q.items.map((x,i)=>i)).map((i,pos)=>`<div class="lorow"><span class="lonum">${pos+1}</span><span class="lolabel">${esc(q.items[i].label)}</span></div>`).join("")}</div><p class="muted" style="margin-top:12px;font-size:13px">players drag to reorder on their phones, then ${v.mode==="timed"?"send":"buzz in"} when ready (shown here in starting order)</p>`;
   if(r.type==="merger")return `<div class="prompt" style="font-size:19px">Two movies share a word — name the <b>merged</b> title</div><div class="mrows">${mergerRowsHTML(q,v.cluesShown||1)}</div>`;
   if(r.type==="riddle")return `<div class="prompt">"${esc(q.prompt)}"</div>`;
@@ -2466,7 +2488,7 @@ function renderLiveHost(){
       ${ranked.map((p,i)=>`<div class="card" style="margin:10px 0;padding:16px;text-align:left"><b>${i+1}. ${esc(p.name)}</b> — ${p.score} pts ${i===0?"🏆":""}</div>`).join("")}
       <button class="btn btn-ghost" style="margin-top:8px" onclick="liveLeave();S=null;render()">Done</button></div>`;
   }
-  app().innerHTML=`<div class="topbar"><div class="brand">Final Cut · Live</div>
+  app().innerHTML=`<div class="topbar"><div class="brand">GameShown · Live</div>
     <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${hostVideoBarHTML()}<span class="tag">room ${L.code}</span>
     <button class="btn btn-ghost btn-sm" onclick="if(confirm('End the live room?')){liveLeave();S=null;render();}">✕ end</button></div></div>`+body;
   fitAllOrphans(app());
@@ -2554,7 +2576,7 @@ function renderLivePlayer(){
   if(!L||L.role!=="player")return;
   setWide(false);
   const v=L.view||{};
-  const head=`<div class="topbar"><div class="brand">Final Cut · Live</div><span class="tag">room ${esc(L.code)}</span></div>`;
+  const head=`<div class="topbar"><div class="brand">GameShown · Live</div><span class="tag">room ${esc(L.code)}</span></div>`;
   let body="";
   if(!v.screen||v.screen==="connecting")body=`<div class="card center" style="padding:44px">connecting to room ${esc(L.code)}…</div>`;
   else if(v.screen==="error")body=`<div class="card center" style="padding:44px">Couldn't find room <b>${esc(L.code)}</b>.<div style="margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="renderLiveEntry()">try again</button></div></div>`;
