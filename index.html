@@ -120,8 +120,8 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .lorow.ghost{position:fixed;z-index:999;pointer-events:none;box-shadow:0 12px 30px rgba(0,0,0,.28);opacity:.95}
 
 /* anagram */
-.scramble{font-family:'Anton',Impact,sans-serif;font-size:clamp(30px,8.5vw,46px);text-align:center;color:var(--red);letter-spacing:.05em;margin:10px 0 22px;text-transform:uppercase}
-.mask{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:clamp(18px,5vw,26px);letter-spacing:.18em;margin-bottom:18px;min-height:34px;word-break:break-word;color:var(--steel)}
+.scramble{font-family:'Anton',Impact,sans-serif;font-size:clamp(26px,8.5vw,46px);text-align:center;color:var(--red);letter-spacing:.05em;margin:10px 0 22px;text-transform:uppercase;text-wrap:balance;max-width:100%;overflow-wrap:break-word}
+.mask{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:clamp(18px,5vw,26px);letter-spacing:.18em;margin-bottom:18px;min-height:34px;word-break:break-word;color:var(--steel);text-wrap:balance}
 
 /* math */
 .mathrow{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:10px;border-left:3px solid var(--red);box-shadow:0 2px 10px rgba(30,15,15,.04)}
@@ -131,11 +131,11 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 /* twins */
 .twininputs{display:grid;gap:10px;margin-top:18px}
 .posters{display:flex;gap:12px;justify-content:center;margin:16px 0}
-.posters img{width:46%;max-width:220px;border-radius:10px;border:1px solid var(--line);animation:pop .5s ease;box-shadow:0 10px 26px rgba(30,15,15,.18)}
+.posters img{width:46%;max-width:220px;max-height:38vh;aspect-ratio:2/3;object-fit:cover;border-radius:10px;border:1px solid var(--line);animation:pop .5s ease;box-shadow:0 10px 26px rgba(30,15,15,.18)}
 
-/* pieces */
-.piecebox{position:relative;max-width:420px;margin:0 auto 8px;border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:0 10px 26px rgba(30,15,15,.15)}
-.piecebox img{width:100%;display:block}
+/* pieces — standard poster ratio so this round can never push the buzzer off-screen */
+.piecebox{position:relative;width:100%;max-width:420px;aspect-ratio:2/3;max-height:46vh;margin:0 auto 8px;border-radius:12px;overflow:hidden;border:1px solid var(--line);box-shadow:0 10px 26px rgba(30,15,15,.15)}
+.piecebox img{width:100%;height:100%;object-fit:cover;display:block}
 .tilegrid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(6,1fr)}
 .tile{background:#dedae5;border:1px solid #fff;transition:opacity .6s ease}
 .tile.open{opacity:0}
@@ -143,7 +143,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 /* title merger */
 .mrows{display:grid;gap:10px}
 .mrow{display:grid;grid-template-columns:1fr 1fr;animation:pop .4s ease}
-.mcell{background:#fff;border:1px solid var(--line);padding:12px 14px;font-size:15px;line-height:1.45}
+.mcell{background:#fff;border:1px solid var(--line);padding:12px 14px;font-size:15px;line-height:1.45;text-wrap:balance;overflow-wrap:break-word}
 .mrow .mcell:first-child{border-right:2.5px solid var(--red);border-radius:12px 0 0 12px}
 .mrow .mcell:last-child{border-left:0;border-radius:0 12px 12px 0}
 .mrow.mhead .mcell{background:var(--panel2);font-weight:800;text-align:center;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--steel)}
@@ -267,8 +267,13 @@ body.hasvideo .wrap{padding-bottom:calc(min(200px,18vw)*0.75 + 90px)}
   body.hasvideo .fab{bottom:calc(22.5vw + 36px)}
 }
 
-/* TMDB panel */
-.tmdb{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(30,15,15,.12);z-index:98;padding:20px;overflow-y:auto}
+/* TMDB panel — a real side pane: page content resizes beside it instead of being covered */
+.tmdb{position:fixed;top:0;right:0;bottom:0;width:min(400px,94vw);background:#fff;border-left:1px solid var(--line);box-shadow:-12px 0 40px rgba(30,15,15,.12);z-index:98;padding:20px;overflow-y:auto;transition:width .15s ease}
+@media(min-width:900px){
+  body.tmdbopen{padding-right:min(400px,94vw)}
+  body.tmdbopen .fab{right:calc(22px + min(400px,94vw))}
+  body.tmdbopen .wrap{transition:padding-right .15s ease}
+}
 .tmdb-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
 .tmdb-res{margin-top:12px}
 .tmdb-item{display:flex;gap:12px;align-items:center;padding:10px;border:1px solid var(--line);border-radius:10px;margin-bottom:8px;cursor:pointer}
@@ -484,6 +489,30 @@ const $=id=>document.getElementById(id);
 const app=()=>$("app");
 function setWide(on){const a=app();if(a)a.classList.toggle("wide",!!on);}
 function esc(s){return (s??"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+/* shrink text that would otherwise wrap and leave a stray orphan letter/word on its own line
+   (title scramble, title merger clue cells) — tries to fit on one line first, then just
+   shrinks until it stops wrapping badly, down to a sane floor */
+function fitNoOrphan(el){
+  if(!el)return;
+  el.style.fontSize="";
+  const cs=getComputedStyle(el);
+  const base=parseFloat(cs.fontSize);
+  if(!base||!isFinite(base))return;
+  const minSize=Math.max(12,base*0.55);
+  let size=base,guard=0;
+  while(guard++<40){
+    const lhRaw=parseFloat(getComputedStyle(el).lineHeight);
+    const lineHeight=isFinite(lhRaw)&&lhRaw>0?lhRaw:size*1.2;
+    const lines=Math.round(el.scrollHeight/lineHeight);
+    if(lines<=1)break;
+    if(size<=minSize)break;
+    size=Math.max(minSize,size-1);
+    el.style.fontSize=size+"px";
+  }
+}
+function fitAllOrphans(root){
+  (root||document).querySelectorAll(".scramble,.mask,.mcell").forEach(fitNoOrphan);
+}
 function toast(msg){
   const t=document.createElement("div");t.className="toast";t.textContent=msg;
   document.body.appendChild(t);setTimeout(()=>t.remove(),1800);
@@ -793,6 +822,7 @@ function renderQuestion(head){
   }
   app().innerHTML=head+body;
   if(r.type==="ordering")initOrderDnD();
+  fitAllOrphans(app());
   const g=$("guess");if(g)g.focus();
 }
 let ODrag=null;
@@ -1322,21 +1352,26 @@ function testPlay(){
 /* ---- TMDB research panel ---- */
 function tmdbKey(){return localStorage.getItem("fc_tmdb")||window.FC_TMDB||"";}
 fetch("tmdb.txt").then(r=>r.ok?r.text():null).then(t=>{if(t&&t.trim())window.FC_TMDB=t.trim();}).catch(()=>{});
+function tmdbClose(){
+  const ex=document.getElementById("tmdbpanel");if(ex)ex.remove();
+  document.body.classList.remove("tmdbopen");
+}
 function tmdbPanel(){
   const ex=document.getElementById("tmdbpanel");
-  if(ex){ex.remove();return;}
+  if(ex){tmdbClose();return;}
   const p=document.createElement("div");p.id="tmdbpanel";p.className="tmdb";
   const key=tmdbKey();
   p.innerHTML=`<div class="tmdb-head"><b>🎬 Movie research <span class="muted" style="font-weight:400;font-size:12px">powered by TMDB</span></b>
-    <button class="btn btn-ghost btn-sm" onclick="document.getElementById('tmdbpanel').remove()">✕</button></div>`+
+    <button class="btn btn-ghost btn-sm" onclick="tmdbClose()">✕</button></div>`+
    (key?`<input type="text" id="tmdbq" placeholder="search any movie… (press Enter)" autocomplete="off"
       onkeydown="if(event.key==='Enter')tmdbSearch()">
     <div id="tmdbres" class="tmdb-res"><p class="muted" style="font-size:13px">Search a movie to get year, director, cast, rating, genres and box office — everything you need to write questions.</p></div>
-    <p class="muted" style="font-size:11.5px;margin-top:10px"><a href="#" onclick="localStorage.removeItem('fc_tmdb');document.getElementById('tmdbpanel').remove();tmdbPanel();return false" style="color:inherit">change API key</a></p>`
+    <p class="muted" style="font-size:11.5px;margin-top:10px"><a href="#" onclick="localStorage.removeItem('fc_tmdb');tmdbClose();tmdbPanel();return false" style="color:inherit">change API key</a></p>`
    :`<p class="muted" style="font-size:13.5px;line-height:1.6;margin-bottom:12px">One-time setup: grab a free API key at <b>themoviedb.org</b> → Settings → API → <b>API Key (v3 auth)</b>, then paste it here. It's stored only in this browser.</p>
     <input type="text" id="tmdbkey" placeholder="paste your TMDB v3 API key">
     <div style="margin-top:10px"><button class="btn btn-gold btn-sm" onclick="tmdbSaveKey()">Save key</button></div>`);
   document.body.appendChild(p);
+  document.body.classList.add("tmdbopen");
   const q=document.getElementById("tmdbq");if(q)q.focus();
 }
 function tmdbSaveKey(){
@@ -1672,7 +1707,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="37";
+const FC_BUILD="38";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
@@ -1884,9 +1919,37 @@ async function hostStartVideo(){
     V.stream=await navigator.mediaDevices.getUserMedia({video:VID_CONSTRAINTS,audio:true});
     addVideo("me",V.stream,"you · mic live",true);
     L.videoOn=true;
+    L.hostMicMuted=false;
     L.videoParts=[{id:L.peer.id,name:"host"}];
     bcastView();renderLiveHost();
   }catch(e){toast("Camera/mic blocked — check browser permissions");}
+}
+function hostStopVideo(){
+  // cameras are a room-wide feature the host gates — turning it off ends the
+  // host's own camera/mic and every connected player's camera too (they can all
+  // turn it back on again later; nothing here is a one-time-only action)
+  if(!L||L.role!=="host")return;
+  destroyVideo();
+  L.videoOn=false;
+  L.videoParts=[];
+  L.micOn={};
+  L.hostMicMuted=false;
+  bcastView();renderLiveHost();
+}
+function toggleHostMic(){
+  if(!L||L.role!=="host"||!V.stream)return;
+  const at=V.stream.getAudioTracks?V.stream.getAudioTracks():[];
+  if(!at.length)return toast("No host mic available");
+  L.hostMicMuted=!L.hostMicMuted;
+  at.forEach(t=>{t.enabled=!L.hostMicMuted;});
+  renderLiveHost();
+}
+function hostVideoBarHTML(){
+  if(!L||L.role!=="host")return "";
+  if(!L.videoOn)return `<button class="btn btn-ghost btn-sm" onclick="hostStartVideo()">🎥 cameras on</button>`;
+  const hasMic=V.stream&&V.stream.getAudioTracks&&V.stream.getAudioTracks().length>0;
+  return `<button class="btn btn-ghost btn-sm" onclick="hostStopVideo()">🎥 cameras off</button>`+
+    (hasMic?`<button class="btn btn-ghost btn-sm" onclick="toggleHostMic()">${L.hostMicMuted?"🔇 unmute me":"🎙 mute me"}</button>`:"");
 }
 async function playerStartVideo(){
   if(V.stream||!L||!L.conn)return;
@@ -1899,10 +1962,37 @@ async function playerStartVideo(){
   V.stream=s;
   const at=s.getAudioTracks?s.getAudioTracks():[];
   at.forEach(t=>{t.enabled=false;});
+  L.selfMuted=false;
   addVideo("me",s,"you",true);
   callParticipants();
   try{L.conn.send({t:"camon",mic:at.length>0});}catch(e){}
   renderLivePlayer();
+}
+function playerStopVideo(){
+  if(!L||L.role!=="player"||!V.stream)return;
+  try{L.conn&&L.conn.send({t:"camoff"});}catch(e){}
+  destroyVideo();
+  L.micLive=false;L.selfMuted=false;
+  renderLivePlayer();
+}
+function toggleSelfMute(){
+  if(!L||L.role!=="player"||!V.stream)return;
+  const at=V.stream.getAudioTracks?V.stream.getAudioTracks():[];
+  if(!at.length)return;
+  L.selfMuted=!L.selfMuted;
+  at.forEach(t=>{t.enabled=!!L.micLive&&!L.selfMuted;});
+  renderLivePlayer();
+}
+function playerVideoBarHTML(v){
+  if(!L||L.role!=="player"||!v||!v.videoOn)return "";
+  const hasMic=V.stream&&V.stream.getAudioTracks&&V.stream.getAudioTracks().length>0;
+  const canJoin=!V.stream&&((v.vparts||[]).length<5);
+  const parts=[];
+  if(canJoin)parts.push(`<button class="btn btn-gold btn-sm" onclick="playerStartVideo()">🎥 turn on my camera</button>`);
+  if(V.stream)parts.push(`<button class="btn btn-ghost btn-sm" onclick="playerStopVideo()">🎥 turn off my camera</button>`);
+  if(hasMic)parts.push(`<button class="btn btn-ghost btn-sm" onclick="toggleSelfMute()">${L.selfMuted?"🔊 unmute me":"🔇 mute me"}</button>`);
+  if(!parts.length)return "";
+  return `<div class="center" style="margin:0 0 14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${parts.join("")}</div>`;
 }
 
 function recallAll(){
@@ -1965,7 +2055,7 @@ function liveHostStart(gameObj,attempt){
   game.rounds.forEach(r=>{r.mode=(r.type==="listReveal"||r.type==="merger"||r.type==="pieces")?"timed":"buzzer";});
   liveLeave();
   const code=liveCode();
-  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",mode:"buzzer",answers:{},auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[],qTime:30,timeLeft:null,qInterval:null};
+  L={role:"host",code,game,players:{},conns:{},ri:0,qi:0,screen:"lobby",cluesShown:1,tiles:4,lockedBy:null,buzzedOut:[],interval:null,revealData:null,tileOrder:[],shufOrder:[],answerMode:"voice",mode:"buzzer",answers:{},auto:false,showAns:true,typedAnswer:null,videoOn:false,videoParts:[],hostMicMuted:false,qTime:30,timeLeft:null,qInterval:null};
   const peer=new Peer("finalcut-"+code.toLowerCase());
   L.peer=peer;
   peer.on("open",()=>{if(L)renderLiveHost();});
@@ -2020,6 +2110,12 @@ function hostMsg(conn,d){
   if(d.t==="micack"){
     const nm=(L.players[conn.peer]||{}).name||"player";
     toast(d.has?("🎙 "+nm+(d.on?" is LIVE":" muted")):("⚠️ "+nm+" has no mic — they may have denied mic permission or need to refresh"));
+  }
+  if(d.t==="camoff"){
+    if(L.videoParts)L.videoParts=L.videoParts.filter(p=>p.id!==conn.peer);
+    removeVideo(conn.peer);
+    if(L.micOn)delete L.micOn[conn.peer];
+    bcastView();renderLiveHost();
   }
   if(d.t==="answer"){
     if(L.mode==="timed"){
@@ -2333,6 +2429,8 @@ function renderLiveHost(){
     </div>`;
   }else if(L.screen==="grading"){
     const r=L.game.rounds[L.ri],q=r.questions[L.qi];
+    const pids=Object.keys(L.players);
+    const allGraded=pids.every(pid=>{const a=(L.answers||{})[pid];return a&&a.awarded!=null;});
     const rows=Object.entries(L.players).map(([pid,p])=>{
       const a=(L.answers||{})[pid];
       const graded=a&&a.awarded!=null;
@@ -2352,7 +2450,8 @@ function renderLiveHost(){
       <button class="btn btn-ghost btn-sm" onclick="L.showAns=!L.showAns;renderLiveHost()">${L.showAns?"hide":"show"}</button></div>
     <p class="colhead" style="margin-top:14px">📝 grade each player</p>
     ${rows}
-    <div style="margin-top:14px"><button class="btn btn-gold" onclick="liveReveal()">Reveal answer</button></div>
+    <div style="margin-top:14px"><button class="btn btn-gold" ${allGraded?"":"disabled"} onclick="liveReveal()">Reveal answer</button>
+      ${allGraded?"":'<p class="muted" style="font-size:12.5px;margin-top:8px">grade everyone before revealing the answer</p>'}</div>
     ${chips}${sbHTML()}`;
   }else if(L.screen==="reveal"){
     body=`<div class="card revealcard">${liveRevealHTML(L.revealData)}
@@ -2368,15 +2467,16 @@ function renderLiveHost(){
       <button class="btn btn-ghost" style="margin-top:8px" onclick="liveLeave();S=null;render()">Done</button></div>`;
   }
   app().innerHTML=`<div class="topbar"><div class="brand">Final Cut · Live</div>
-    <div style="display:flex;gap:8px;align-items:center"><span class="tag">room ${L.code}</span>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${hostVideoBarHTML()}<span class="tag">room ${L.code}</span>
     <button class="btn btn-ghost btn-sm" onclick="if(confirm('End the live room?')){liveLeave();S=null;render();}">✕ end</button></div></div>`+body;
+  fitAllOrphans(app());
 }
 
 /* ---- player ---- */
 function liveJoin(code,name){
   if(typeof Peer==="undefined")return toast("Live rooms need internet — PeerJS didn't load");
   liveLeave();
-  L={role:"player",code:code.toUpperCase(),name,peer:null,conn:null,game:null,view:{screen:"connecting"},myId:null,buzzed:false,sentAnswer:false};
+  L={role:"player",code:code.toUpperCase(),name,peer:null,conn:null,game:null,view:{screen:"connecting"},myId:null,buzzed:false,sentAnswer:false,selfMuted:false,micLive:false};
   const peer=new Peer();
   L.peer=peer;
   peer.on("call",handleIncomingCall);
@@ -2399,8 +2499,8 @@ function playerMsg(d){
   if(d.t==="sfx"){playerSfx(d.name);return;}
   if(d.t==="mic"){
     const has=V.stream&&V.stream.getAudioTracks&&V.stream.getAudioTracks().length>0;
-    if(has)V.stream.getAudioTracks().forEach(t=>{t.enabled=!!d.on;});
     L.micLive=!!d.on&&has;
+    if(has)V.stream.getAudioTracks().forEach(t=>{t.enabled=L.micLive&&!L.selfMuted;});
     if(d.on&&has)recallAll(); // fresh offers carrying live audio — most reliable path
     try{L.conn.send({t:"micack",on:!!d.on,has:!!has});}catch(e){}
     if(d.on&&has)toast("🎙 the host put you on air!");
@@ -2423,7 +2523,8 @@ function playerMsg(d){
     }else{
       if(d.v.screen!=="question"||d.v.lockedId!==L.myId)L.sentAnswer=false;
     }
-    if(V.stream)callParticipants();
+    if(d.v.videoOn===false&&V.stream)playerStopVideo(); // host turned cameras off room-wide
+    else if(V.stream)callParticipants();
   }
   renderLivePlayer();
 }
@@ -2460,12 +2561,11 @@ function renderLivePlayer(){
   else if(v.screen==="disconnected")body=`<div class="card center" style="padding:44px">Disconnected from the host.<div style="margin-top:16px"><button class="btn btn-ghost btn-sm" onclick="renderLiveEntry()">rejoin</button></div></div>`;
   else if(v.screen==="lobby")body=`<div class="card center" style="padding:40px 22px"><div class="tag">you're in!</div>
     <p style="margin:16px 0 4px;font-size:17px">Hi <b>${esc(L.name)}</b> — waiting for the host to start…</p>${liveScoresChips(v)}
-    ${v.videoOn&&!V.stream&&((v.vparts||[]).length<5)?`<div style="margin-top:16px"><button class="btn btn-gold btn-sm" onclick="playerStartVideo()">🎥 turn on my camera</button><p class="muted" style="font-size:11.5px;margin-top:6px">you start muted — only the host can put your mic on air</p></div>`:""}</div>`;
+    ${v.videoOn&&!V.stream?`<p class="muted" style="font-size:11.5px;margin-top:6px">you start muted — only the host can put your mic on air</p>`:""}</div>`;
   else if(v.screen==="roundIntro"){
     const r=L.game&&L.game.rounds[v.ri];
     body=`<div class="roundintro"><div class="num">Round ${v.ri+1}</div><h2 class="display">${esc(r?r.name:"")}</h2>
-    <div class="rule">${r?(r.rule||""):""}</div><p class="muted">get your buzzer finger ready…</p>
-    ${v.videoOn&&!V.stream&&((v.vparts||[]).length<5)?`<div style="margin-top:10px"><button class="btn btn-ghost btn-sm" onclick="playerStartVideo()">🎥 turn on my camera</button></div>`:""}</div>`;
+    <div class="rule">${r?(r.rule||""):""}</div><p class="muted">get your buzzer finger ready…</p></div>`;
   }
   else if(v.screen==="question"&&L.game&&L.game.rounds[v.ri]&&L.game.rounds[v.ri].type==="ordering"){
     const r=L.game.rounds[v.ri],q=r.questions[v.qi];
@@ -2559,7 +2659,9 @@ function renderLivePlayer(){
   }
   const prev=document.getElementById("panswer");
   const keep=prev?{v:prev.value,f:document.activeElement===prev}:null;
-  const mb=L.micLive?`<div class="miclive">🎙 your mic is LIVE to the room</div>`:"";
+  const hasMic=V.stream&&V.stream.getAudioTracks&&V.stream.getAudioTracks().length>0;
+  const micStatus=hasMic?(L.micLive?(L.selfMuted?`<div class="miclive" style="animation:none;opacity:.55">🔇 you muted yourself</div>`:`<div class="miclive">🎙 your mic is LIVE to the room</div>`):`<div class="miclive" style="animation:none;opacity:.55">🎙 mic ready — waiting for the host to put you on air</div>`):"";
+  const mb=micStatus+playerVideoBarHTML(v);
   app().innerHTML=head+mb+body;
   const ni=document.getElementById("panswer");
   if(ni&&keep){
@@ -2568,6 +2670,7 @@ function renderLivePlayer(){
     if(b)b.disabled=!ni.value.trim();
   }
   if(v.screen==="question"&&L.game&&L.game.rounds[v.ri]&&L.game.rounds[v.ri].type==="ordering")initLiveOrderDnD();
+  fitAllOrphans(app());
 }
 function liveOrderRowsHTML(q,arr){
   return `<div class="lolist">${arr.map((it,i)=>`<div class="lorow" data-lorow="${i}"><span class="loh">⠿</span><span class="lonum">${i+1}</span><span class="lolabel">${esc((q.items[it]&&q.items[it].label)||"?")}</span></div>`).join("")}</div>`;
