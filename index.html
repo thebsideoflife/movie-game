@@ -74,6 +74,30 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .roundintro .rule{color:var(--muted);font-size:16px;line-height:1.6;max-width:440px;margin:0 auto 30px}
 .pts{color:var(--red);font-weight:700}
 
+/* ---------- round-intro example demos ---------- */
+.example-demo{margin:0 auto 30px;padding:20px 18px;background:var(--panel2);border:1px solid var(--line);border-radius:14px;max-width:420px}
+.ex-tag{font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--red);font-weight:800;margin-bottom:12px}
+.ex-caption{font-size:12px;color:var(--muted);margin-top:12px}
+.ex-stage{min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px}
+@keyframes exIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+.ex-clue,.ex-orow,.ex-mrow,.ex-twincard,.ex-riddletext,.ex-quotebubble,.ex-mword{opacity:0;animation:exIn .5s ease forwards}
+.ex-answer{opacity:0;animation:exIn .5s ease forwards;font-weight:800;color:var(--red);margin-top:6px;font-size:14px}
+.ex-clue{font-size:13px;color:var(--text)}
+.ex-orow{font-size:13px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:7px 14px;width:100%;max-width:280px;text-align:left;box-sizing:border-box}
+.ex-riddletext,.ex-quotebubble{font-size:14px;font-style:italic;text-align:center;max-width:320px;font-family:'Fraunces',Georgia,serif}
+.ex-mrow{font-size:13px}
+.ex-mop{font-size:16px;color:var(--red);font-weight:800}
+@keyframes exLetter{0%{opacity:0;transform:translateY(-12px) rotate(-18deg)}60%{opacity:1;transform:translateY(2px) rotate(6deg)}100%{opacity:1;transform:none}}
+.ex-letters{display:flex;gap:4px}
+.ex-letter{display:inline-flex;width:28px;height:28px;background:#fff;border:1px solid var(--line);border-radius:6px;align-items:center;justify-content:center;font-weight:800;font-family:ui-monospace,monospace;opacity:0;animation:exLetter .5s ease forwards}
+.ex-twins{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.ex-twincard{background:#fff;border:1px solid var(--line);border-radius:8px;padding:8px 13px;font-size:12.5px}
+@keyframes exTile{0%{opacity:0;transform:scale(.6)}100%{opacity:1;transform:none}}
+.ex-tiles{display:grid;grid-template-columns:repeat(3,28px);gap:3px}
+.ex-tile{width:28px;height:28px;border-radius:4px;background:linear-gradient(135deg,var(--red2),var(--red));opacity:0;animation:exTile .4s ease forwards}
+.ex-merger{display:flex;flex-direction:column;align-items:center;gap:6px}
+.ex-mword{font-family:'Anton',Impact,sans-serif;font-size:15px;letter-spacing:.04em;color:var(--steel)}
+
 /* ---------- question ---------- */
 .qhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
 .qhead .qnum{font-size:12px;color:var(--muted);font-weight:700;letter-spacing:.14em;text-transform:uppercase}
@@ -122,6 +146,8 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 /* anagram */
 .scramble{font-family:'Anton',Impact,sans-serif;font-size:clamp(26px,8.5vw,46px);text-align:center;color:var(--red);letter-spacing:.05em;margin:10px 0 22px;text-transform:uppercase;text-wrap:balance;max-width:100%;overflow-wrap:break-word}
 .mask{text-align:center;font-family:ui-monospace,Menlo,monospace;font-size:clamp(18px,5vw,26px);letter-spacing:.18em;margin-bottom:18px;min-height:34px;word-break:break-word;color:var(--steel);text-wrap:balance}
+.mask .letter{font-weight:800;color:var(--steel)}
+.mask .blank{display:inline-block;min-width:.75em;height:.2em;border-bottom:5px solid var(--steel);margin:0 1px 3px;vertical-align:bottom;border-radius:2px}
 
 /* math */
 .mathrow{background:#fff;border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:10px;border-left:3px solid var(--red);box-shadow:0 2px 10px rgba(30,15,15,.04)}
@@ -226,6 +252,9 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .buzzbtn:active{transform:scale(.93)}
 .buzzbtn[disabled]{opacity:.35;filter:grayscale(.5);pointer-events:none}
 .buzzmsg{font-weight:800;font-size:20px;padding:26px;border-radius:16px;background:#fff;border:1px solid var(--line);display:inline-block}
+.buzzspacer{height:150px}
+.buzzdock{position:fixed;left:0;right:0;bottom:0;z-index:85;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 16px max(16px,env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 55%,rgba(253,248,243,0));pointer-events:none;text-align:center}
+.buzzdock>*{pointer-events:auto}
 .buzzmsg.you{color:var(--good);border-color:var(--good)}
 .buzzmsg.out{color:var(--muted)}
 .livescores{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
@@ -659,6 +688,87 @@ function adminImport(){
 }
 
 /* ---------- round intro ---------- */
+const ROUND_EXAMPLES={
+  listReveal:{
+    caption:"clues appear one by one — guess as early as you can",
+    html:`<div class="ex-clues">
+      <div class="ex-clue" style="animation-delay:.1s">Its summit sits above 8,800 meters</div>
+      <div class="ex-clue" style="animation-delay:1.2s">It straddles the border of two countries</div>
+      <div class="ex-clue" style="animation-delay:2.3s">The first confirmed summit was in 1953</div>
+      <div class="ex-clue" style="animation-delay:3.4s">Local guides call it "Chomolungma"</div>
+      <div class="ex-answer" style="animation-delay:4.5s">Mount Everest</div>
+    </div>`
+  },
+  quote:{
+    caption:"a line is read aloud (or shown) — name what it's describing",
+    html:`<div class="ex-quote-demo">
+      <div class="ex-quotebubble">"Ladies and gentlemen, that is how you stick a landing."</div>
+      <div class="ex-answer" style="animation-delay:1.8s">a gymnastics routine</div>
+    </div>`
+  },
+  ordering:{
+    caption:"drag items into the right order",
+    html:`<div class="ex-order">
+      <div class="ex-orow" style="animation-delay:.1s">1 · The printing press</div>
+      <div class="ex-orow" style="animation-delay:.6s">2 · The telephone</div>
+      <div class="ex-orow" style="animation-delay:1.1s">3 · The airplane</div>
+      <div class="ex-orow" style="animation-delay:1.6s">4 · The smartphone</div>
+    </div>`
+  },
+  riddle:{
+    caption:"the answer, said very unhelpfully",
+    html:`<div class="ex-riddle">
+      <div class="ex-riddletext">"A hexagonal ice crystal that ruins your commute but delights your inner child"</div>
+      <div class="ex-answer" style="animation-delay:1.8s">snowflake</div>
+    </div>`
+  },
+  anagram:{
+    caption:"unscramble the letters",
+    html:`<div class="ex-anagram">
+      <div class="ex-letters">${["A","X","Y","A","L","G"].map((ch,i)=>`<span class="ex-letter" style="animation-delay:${(i*0.12).toFixed(2)}s">${ch}</span>`).join("")}</div>
+      <div class="ex-answer" style="animation-delay:1.6s">GALAXY</div>
+    </div>`
+  },
+  math:{
+    caption:"numeric clues that add up to the answer",
+    html:`<div class="ex-math">
+      <div class="ex-mrow" style="animation-delay:.1s">Legs on a spider</div>
+      <div class="ex-mop">×</div>
+      <div class="ex-mrow" style="animation-delay:.7s">Strings on a violin</div>
+      <div class="ex-mop">=</div>
+      <div class="ex-answer" style="animation-delay:1.5s">8 × 4 = 32</div>
+    </div>`
+  },
+  twins:{
+    caption:"two different answers, same idea",
+    html:`<div class="ex-twins">
+      <div class="ex-twincard" style="animation-delay:.1s">cloud bread</div>
+      <div class="ex-twincard" style="animation-delay:.5s">dalgona coffee</div>
+      <div class="ex-answer" style="animation-delay:1.4s">both viral food trends, same summer</div>
+    </div>`
+  },
+  pieces:{
+    caption:"an image revealed tile by tile",
+    html:`<div class="ex-tiles">${Array.from({length:9}).map((_,i)=>`<div class="ex-tile" style="animation-delay:${(i*.15).toFixed(2)}s"></div>`).join("")}</div>`
+  },
+  merger:{
+    caption:"two answers fused by a shared word",
+    html:`<div class="ex-merger">
+      <div class="ex-mword left">SUNFLOWER</div>
+      <div class="ex-mword right" style="animation-delay:.15s">FLOWER POWER</div>
+      <div class="ex-answer" style="animation-delay:1.4s">SUNFLOWER POWER</div>
+    </div>`
+  }
+};
+function roundExampleHTML(type){
+  const ex=ROUND_EXAMPLES[type];
+  if(!ex)return "";
+  return `<div class="example-demo">
+    <div class="ex-tag">for example</div>
+    <div class="ex-stage">${ex.html}</div>
+    <p class="ex-caption">${esc(ex.caption)}</p>
+  </div>`;
+}
 function renderRoundIntro(head){
   const r=S.game.rounds[S.ri];
   app().innerHTML=head+`
@@ -666,6 +776,7 @@ function renderRoundIntro(head){
     <div class="num">Round ${S.ri+1} of ${S.game.rounds.length}</div>
     <h2 class="display">${esc(r.name)}</h2>
     <div class="rule">${r.rule||""}</div>
+    ${roundExampleHTML(r.type)}
     <button class="btn btn-gold" onclick="beginQuestion()">Start round</button>
   </div>`;
 }
@@ -693,7 +804,7 @@ function beginQuestion(){
       else clearInterval(RT.interval);
     },7000);
   }
-  if(r.type==="quote")setTimeout(()=>{try{speakQuote()}catch(e){}},450);
+  if(r.type==="quote"&&!q.showText)setTimeout(()=>{try{speakQuote()}catch(e){}},450);
   if(r.type==="pieces"){
     RT.tiles=4;
     RT.tileOrder=(q.tileOrder&&q.tileOrder.length===24)?q.tileOrder.slice():piecesOrder();
@@ -756,9 +867,12 @@ function renderQuestion(head){
   else if(r.type==="quote"){
     body=qheadHTML()+`
       <div class="quotecard center">
-        <p class="muted" style="font-size:14px;margin-bottom:14px">🤖 audio-only — the robot reads the quote, no peeking at words</p>
-        <button class="btn btn-gold" onclick="speakQuote()">🔊 Play the quote</button>
-        <button class="speakbtn" style="margin-left:8px" onclick="speakQuote()">↻ replay</button>
+        ${q.showText
+          ?`<p style="font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:19px;margin-bottom:14px">“${esc(q.quote)}”</p>
+            <button class="speakbtn" onclick="speakQuote()">🔊 hear it read aloud</button>`
+          :`<p class="muted" style="font-size:14px;margin-bottom:14px">🤖 audio-only — the robot reads the quote, no peeking at words</p>
+            <button class="btn btn-gold" onclick="speakQuote()">🔊 Play the quote</button>
+            <button class="speakbtn" style="margin-left:8px" onclick="speakQuote()">↻ replay</button>`}
       </div>
       <div class="prompt" style="font-size:20px;margin-top:16px">${esc(q.ask||"Name the answer")}</div>`
       +answerBarHTML();
@@ -916,7 +1030,7 @@ function anagramMask(q){
   const show=new Set(RT.maskOrder.slice(0,showN));
   return [...ans].map((ch,i)=>{
     if(!/[a-z0-9]/i.test(ch))return ch===" "?"&nbsp;&nbsp;&nbsp;&nbsp;":esc(ch);
-    return show.has(i)?esc(ch.toUpperCase()):"_";
+    return show.has(i)?`<span class="letter">${esc(ch.toUpperCase())}</span>`:`<span class="blank"></span>`;
   }).join(" ");
 }
 function takeHint(){
@@ -1516,6 +1630,7 @@ function editQ(ri,qi){
     fields=`
     ${f("The quote","ta","f_quote",v(q&&q.quote))}
     ${f("What are you asking? (e.g. Name the answer)","in","f_ask",v(q&&q.ask))}
+    ${f("Show the quote text on screen (unchecked = audio-only, players just listen)","chk","f_showtext",q&&q.showText)}
     ${f("Accepted answers — comma separated","in","f_answers",(q?q.answers.join(", "):""))}
     ${f("Display answer","in","f_display",v(q&&q.display))}
     ${f("Fun fact (optional)","in","f_fact",v(q&&q.fact))}`;
@@ -1685,18 +1800,22 @@ async function pcAuto(){
   }
 }
 function f(label,kind,id,val){
+  if(kind==="chk"){
+    return `<div class="field span2"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600"><input type="checkbox" id="${id}" ${val?"checked":""} style="width:auto"> ${label}</label></div>`;
+  }
   return `<div class="field ${kind==="ta"?"span2":""}"><label>${label}</label>${
     kind==="ta"?`<textarea id="${id}" rows="4">${val}</textarea>`
                :`<input type="text" id="${id}" value="${val}">`}</div>`;
 }
 function gv(id){const e=$(id);return e?e.value.trim():"";}
+function gvChk(id){const e=$(id);return e?!!e.checked:false;}
 function csv(id){return gv(id).split(",").map(s=>s.trim()).filter(Boolean);}
 function saveQ(ri,qi){
   const r=C.rounds[ri],t=r.type;
   let q=null;
   try{
     if(t==="listReveal")q={clues:CLQ.map(s=>(s||"").trim()).filter(Boolean),answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
-    if(t==="quote")q={quote:gv("f_quote"),ask:gv("f_ask")||"Name the answer",answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
+    if(t==="quote")q={quote:gv("f_quote"),ask:gv("f_ask")||"Name the answer",showText:gvChk("f_showtext"),answers:csv("f_answers"),display:gv("f_display"),fact:gv("f_fact")||undefined};
     if(t==="ordering"){
       const labels=gv("f_items").split("\n").map(s=>s.trim()).filter(Boolean);
       const notes=gv("f_notes").split("\n").map(s=>s.trim());
@@ -1729,7 +1848,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="41";
+const FC_BUILD="42";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
@@ -2328,14 +2447,14 @@ function liveScoresChips(v,buzzingName){
 }
 function liveQHTML(r,q,v){
   if(r.type==="listReveal")return `<div class="clues">${q.clues.map((c,i)=>i<v.cluesShown?`<div class="clue">${esc(c)}</div>`:`<div class="clue hidden-clue">next clue soon…</div>`).join("")}</div>`;
-  if(r.type==="quote")return `<div class="quotecard center"><p class="muted" style="font-size:14px;margin-bottom:12px">🤖 audio-only quote — listen closely</p><button class="btn btn-gold btn-sm" onclick="liveSpeakQuote()">🔊 Play the quote</button></div><div class="prompt" style="font-size:20px;margin-top:14px">${esc(q.ask||"Name the answer")}</div>`;
+  if(r.type==="quote")return `<div class="quotecard center">${q.showText?`<p style="font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:19px;margin-bottom:10px">“${esc(q.quote)}”</p>`:`<p class="muted" style="font-size:14px;margin-bottom:12px">🤖 audio-only quote — listen closely</p>`}<button class="btn btn-gold btn-sm" onclick="liveSpeakQuote()">🔊 Play the quote</button></div><div class="prompt" style="font-size:20px;margin-top:14px">${esc(q.ask||"Name the answer")}</div>`;
   if(r.type==="ordering")return `<div class="prompt" style="font-size:21px">${esc(q.prompt)}</div><div class="lolist">${(v.shuffled&&v.shuffled.length?v.shuffled:q.items.map((x,i)=>i)).map((i,pos)=>`<div class="lorow"><span class="lonum">${pos+1}</span><span class="lolabel">${esc(q.items[i].label)}</span></div>`).join("")}</div><p class="muted" style="margin-top:12px;font-size:13px">players drag to reorder on their phones, then ${v.mode==="timed"?"send":"buzz in"} when ready (shown here in starting order)</p>`;
   if(r.type==="merger")return `<div class="prompt" style="font-size:19px">Two movies share a word — name the <b>merged</b> title</div><div class="mrows">${mergerRowsHTML(q,v.cluesShown||1)}</div>`;
   if(r.type==="riddle")return `<div class="prompt">"${esc(q.prompt)}"</div>`;
   if(r.type==="anagram"){
     const ans=q.display||(q.answers&&q.answers[0])||"";
     const mask=[...ans].map(ch=>{
-      if(/[a-z0-9]/i.test(ch))return "_";
+      if(/[a-z0-9]/i.test(ch))return `<span class="blank"></span>`;
       return ch===" "?"&nbsp;&nbsp;&nbsp;&nbsp;":esc(ch);
     }).join(" ");
     return `<div class="scramble">${esc(q.scramble)}</div><div class="mask">${mask}</div><p class="muted center" style="font-size:12.5px;margin-top:6px">the shape of the answer — one dash per letter</p>`;
@@ -2400,6 +2519,7 @@ function renderLiveHost(){
     body=`<div class="roundintro">
       <div class="num">Round ${L.ri+1} of ${L.game.rounds.length}</div>
       <h2 class="display">${esc(r.name)}</h2><div class="rule">${r.rule||""}</div>
+      ${roundExampleHTML(r.type)}
       <button class="btn btn-gold" onclick="liveBeginQ()">Show first question</button></div>${chips}`;
   }else if(L.screen==="question"){
     const r=L.game.rounds[L.ri],q=r.questions[L.qi];
@@ -2587,7 +2707,9 @@ function renderLivePlayer(){
   else if(v.screen==="roundIntro"){
     const r=L.game&&L.game.rounds[v.ri];
     body=`<div class="roundintro"><div class="num">Round ${v.ri+1}</div><h2 class="display">${esc(r?r.name:"")}</h2>
-    <div class="rule">${r?(r.rule||""):""}</div><p class="muted">get your buzzer finger ready…</p></div>`;
+    <div class="rule">${r?(r.rule||""):""}</div>
+    ${r?roundExampleHTML(r.type):""}
+    <p class="muted">get your buzzer finger ready…</p></div>`;
   }
   else if(v.screen==="question"&&L.game&&L.game.rounds[v.ri]&&L.game.rounds[v.ri].type==="ordering"){
     const r=L.game.rounds[v.ri],q=r.questions[v.qi];
@@ -2595,16 +2717,16 @@ function renderLivePlayer(){
     let listHtml="",actionArea;
     if(v.mode==="timed"){
       listHtml=liveOrderRowsHTML(q,curArr);
-      actionArea=`<p class="muted" style="font-size:12.5px;margin-top:10px">${L.sentAnswer?"✅ order sent — drag to change your mind, then send again":"drag to arrange, then send — you can resend until time's up"}</p>
-        <div class="center" style="margin-top:10px"><button class="btn btn-gold" onclick="sendOrderAnswer()">${L.sentAnswer?"Send again":"Send my order"}</button></div>`;
+      actionArea=`<p class="muted" style="font-size:12.5px">${L.sentAnswer?"✅ order sent — drag to change your mind, then send again":"drag to arrange, then send — you can resend until time's up"}</p>
+        <button class="btn btn-gold" onclick="sendOrderAnswer()">${L.sentAnswer?"Send again":"Send my order"}</button>`;
     }else{
       const out=(v.buzzedOut||[]).includes(L.myId);
-      if(v.lockedId===L.myId)actionArea=`<div class="buzzmsg you" style="margin-top:14px">🔔 YOU'RE UP — host is checking your order…</div>`;
-      else if(v.lockedBy)actionArea=`<div class="buzzmsg" style="margin-top:14px">🔔 ${esc(v.lockedBy)} buzzed…${v.typed?`<br><span class="muted" style="font-size:14px">“${esc(v.typed.text)}”</span>`:""}</div>`;
-      else if(out)actionArea=`<div class="buzzmsg out" style="margin-top:14px">locked out of this one 😬</div>`;
+      if(v.lockedId===L.myId)actionArea=`<div class="buzzmsg you">🔔 YOU'RE UP — host is checking your order…</div>`;
+      else if(v.lockedBy)actionArea=`<div class="buzzmsg">🔔 ${esc(v.lockedBy)} buzzed…${v.typed?`<br><span class="muted" style="font-size:14px">“${esc(v.typed.text)}”</span>`:""}</div>`;
+      else if(out)actionArea=`<div class="buzzmsg out">locked out of this one 😬</div>`;
       else{
         listHtml=liveOrderRowsHTML(q,curArr);
-        actionArea=`<div class="center" style="margin-top:14px"><button class="buzzbtn" onclick="buzzOrder()">BUZZ</button></div>`;
+        actionArea=`<button class="buzzbtn" onclick="buzzOrder()">BUZZ</button>`;
       }
     }
     body=`<div class="qhead"><span class="qnum">R${v.ri+1} · Q${v.qi+1}</span>
@@ -2615,12 +2737,13 @@ function renderLivePlayer(){
       <div class="prompt" style="font-size:19px;text-align:center;margin-top:6px">${esc(q.prompt)}</div>
       ${listHtml?`<p class="muted center" style="font-size:12.5px;margin-top:4px">drag any movie up or down to put them in order</p>`:""}
       ${listHtml}
-      ${actionArea}`;
+      <div class="buzzspacer"></div>
+      <div class="buzzdock">${actionArea}</div>`;
   }
   else if(v.screen==="question"&&v.mode==="timed"){
     const r=L.game&&L.game.rounds[v.ri],q=r&&r.questions[v.qi];
     const buzzArea=`
-      <div class="answerbar" style="max-width:420px;margin:0 auto 10px">
+      <div class="answerbar" style="max-width:420px;margin:0 auto">
         <input type="text" id="panswer" placeholder="type your answer…" autocomplete="off" onkeydown="if(event.key==='Enter')sendAnswer()">
         <button class="btn btn-gold" onclick="sendAnswer()">Send</button>
       </div>
@@ -2631,7 +2754,8 @@ function renderLivePlayer(){
         ${v.timeLeft!=null?`<span class="potbadge">⏱ <b id="qtimersec">${v.timeLeft}</b>s</span>`:""}
       </span></div>
       ${q?liveQHTML(r,q,v):""}
-      <div class="center" style="margin:22px 0">${buzzArea}</div>`;
+      <div class="buzzspacer"></div>
+      <div class="buzzdock">${buzzArea}</div>`;
   }
   else if(v.screen==="grading")body=`<div class="card center" style="padding:36px 22px"><div class="tag">⏳ time's up</div>
     <p style="margin:14px 0 4px;font-size:16px">the host is grading everyone's answers…</p>
@@ -2669,7 +2793,8 @@ function renderLivePlayer(){
         ${v.timeLeft!=null?`<span class="potbadge">⏱ <b id="qtimersec">${v.timeLeft}</b>s</span>`:""}
       </span></div>
       ${q?liveQHTML(r,q,v):""}
-      <div class="center" style="margin:22px 0">${buzzArea}</div>`;
+      <div class="buzzspacer"></div>
+      <div class="buzzdock">${buzzArea}</div>`;
   }
   else if(v.screen==="reveal")body=`<div class="card revealcard">${liveRevealHTML(v.reveal)}</div>${liveScoresChips(v)}`;
   else if(v.screen==="scores")body=`<div class="card center" style="padding:32px"><div class="tag">scores</div><div style="margin-top:16px">${liveScoresChips(v)}</div></div>`;
