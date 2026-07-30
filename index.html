@@ -253,8 +253,17 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .buzzbtn[disabled]{opacity:.35;filter:grayscale(.5);pointer-events:none}
 .buzzmsg{font-weight:800;font-size:20px;padding:26px;border-radius:16px;background:#fff;border:1px solid var(--line);display:inline-block}
 .buzzspacer{height:150px}
-.buzzdock{position:fixed;left:0;right:0;bottom:0;z-index:85;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 16px max(16px,env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 55%,rgba(253,248,243,0));pointer-events:none;text-align:center}
+.buzzdock{position:fixed;left:0;right:0;bottom:0;z-index:96;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px 16px max(16px,env(safe-area-inset-bottom));background:linear-gradient(to top,var(--bg) 55%,rgba(253,248,243,0));pointer-events:none;text-align:center}
 .buzzdock>*{pointer-events:auto}
+/* when cameras are on, the video strip sits fixed at the very bottom (z-index 95) —
+   lift the buzz dock above it (same offset formula as .wrap/.fab) and give the
+   spacer enough extra height so real page content isn't hidden behind either bar */
+body.hasvideo .buzzdock{bottom:calc(min(200px,18vw)*0.75 + 90px)}
+body.hasvideo .buzzspacer{height:calc(150px + min(200px,18vw)*0.75 + 90px)}
+@media(max-width:700px){
+  body.hasvideo .buzzdock{bottom:calc(22.5vw + 36px)}
+  body.hasvideo .buzzspacer{height:calc(150px + 22.5vw + 36px)}
+}
 .buzzmsg.you{color:var(--good);border-color:var(--good)}
 .buzzmsg.out{color:var(--muted)}
 .livescores{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
@@ -281,6 +290,7 @@ input[type=text]:focus,textarea:focus{border-color:var(--red2)}
 .hostans{background:#fffdf2;border:1.5px dashed #dfc46a;border-radius:12px;padding:12px 16px;margin-top:14px;font-size:14.5px;display:flex;align-items:center;flex-wrap:wrap;gap:4px}
 
 #videostrip{position:fixed;left:0;right:0;bottom:0;top:auto;display:flex;flex-wrap:nowrap;gap:10px;z-index:95;justify-content:center;align-items:center;padding:10px 10px calc(10px + env(safe-area-inset-bottom));background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid var(--line);overflow-x:auto}
+.vidcontrols{display:flex;gap:6px;flex-wrap:nowrap;align-items:center;flex-shrink:0}
 body.hasvideo .wrap{padding-bottom:calc(min(200px,18vw)*0.75 + 90px)}
 .vtile{width:min(200px,18vw);aspect-ratio:4/3;border-radius:14px;overflow:hidden;background:#000;position:relative;box-shadow:0 10px 30px rgba(0,0,0,.35);border:3px solid #fff}
 .vtile video{width:100%;height:100%;object-fit:cover;display:block}
@@ -318,7 +328,7 @@ body.hasvideo .wrap{padding-bottom:calc(min(200px,18vw)*0.75 + 90px)}
 
 <script>
 /* =====================================================
-   a movie game — playable POC
+   GameShown — trivia for anything, playable POC
    single-file prototype: player engine + creator
    ===================================================== */
 
@@ -905,7 +915,7 @@ function renderQuestion(head){
   }
   else if(r.type==="merger"){
     body=qheadHTML()+`
-      <div class="prompt" style="font-size:19px">Two movies share a word — name the <b>merged</b> title</div>
+      <div class="prompt" style="font-size:19px">Two answers share a word — name the <b>merged</b> title</div>
       <div class="mrows" id="mergerows">${mergerRowsHTML(q,RT.cluesShown)}</div>`
       +answerBarHTML("the merged title…");
   }
@@ -1050,7 +1060,7 @@ function cluesHTML(q){
 }
 function mergerRowsHTML(q,shown){
   const rows=[["about",q.a.hint,q.b.hint],["year",q.a.year,q.b.year],["linked to",q.a.actor1,q.b.actor1],["linked to",q.a.actor2,q.b.actor2]];
-  const head=`<div class="mrow mhead"><div class="mcell">🎬 movie one</div><div class="mcell">🎬 movie two</div></div>`;
+  const head=`<div class="mrow mhead"><div class="mcell">🎬 answer one</div><div class="mcell">🎬 answer two</div></div>`;
   return head+rows.map((r,i)=> i<shown
     ?`<div class="mrow"><div class="mcell"><div class="mlabel">${r[0]}</div>${esc(r[1]||"")}</div><div class="mcell"><div class="mlabel">${r[0]}</div>${esc(r[2]||"")}</div></div>`
     :`<div class="clue hidden-clue">next clues soon…</div>`).join("");
@@ -1260,7 +1270,7 @@ function renderFinal(head){
   </div>`;
 }
 function shareScore(maxAll){
-  const txt=`🎬 FINAL CUT — ${S.game.title}\nI scored ${S.score}/${maxAll}. Think you can beat that?\nhttps://thebsideoflife.github.io/movie-game/`;
+  const txt=`🎬 GAMESHOWN — ${S.game.title}\nI scored ${S.score}/${maxAll}. Think you can beat that?\nhttps://thebsideoflife.github.io/movie-game/`;
   (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject())
     .then(()=>toast("Score copied — paste it to your friends"))
     .catch(()=>{prompt("Copy your score:",txt);});
@@ -1883,9 +1893,9 @@ function saveQ(ri,qi){
   // light validation
   const needsAnswers=["listReveal","quote","riddle","anagram","pieces","merger"];
   if(needsAnswers.includes(t)&&(!q.answers||!q.answers.length))return toast("Add at least one accepted answer");
-  if(t==="ordering"&&(!q.items||q.items.length!==4))return toast("Ordering needs exactly 4 movies");
+  if(t==="ordering"&&(!q.items||q.items.length!==4))return toast("Ordering needs exactly 4 items");
   if(t==="math"&&q.parts.some(p=>!p.answers.length))return toast("Each math line needs answers");
-  if(t==="twins"&&(!q.a.answers.length||!q.b.answers.length))return toast("Both movies need answers");
+  if(t==="twins"&&(!q.a.answers.length||!q.b.answers.length))return toast("Both items need answers");
   if(qi>=0)r.questions[qi]=q;else r.questions.push(q);
   persistC();renderRoundEditor(ri);
 }
@@ -1893,7 +1903,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="43";
+const FC_BUILD="44";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
@@ -1992,9 +2002,28 @@ function liveLeave(){try{stopLiveTimers();stopQTimer();destroyVideo();if(L&&L.pe
 let V={stream:null,calls:{},els:{},audioTiles:{},audioEnabled:false};
 function ensureStrip(){
   let s=document.getElementById("videostrip");
-  if(!s){s=document.createElement("div");s.id="videostrip";document.body.appendChild(s);
-    if(document.body.classList)document.body.classList.add("hasvideo");}
+  if(!s){
+    s=document.createElement("div");s.id="videostrip";
+    const ctrl=document.createElement("div");ctrl.id="vidcontrols";ctrl.className="vidcontrols";
+    s.appendChild(ctrl);
+    document.body.appendChild(s);
+    if(document.body.classList)document.body.classList.add("hasvideo");
+  }
   return s;
+}
+// keeps the camera-on/off + mute-me buttons living right next to the actual video
+// tiles at the bottom of the screen, instead of scattered up in the topbar
+function updateVidControls(){
+  if(!L)return;
+  const wantStrip=L.role==="host"?!!L.videoOn:(L.role==="player"?!!(L.view&&L.view.videoOn):false);
+  if(!wantStrip){
+    const c=document.getElementById("vidcontrols");
+    if(c)c.innerHTML="";
+    return;
+  }
+  ensureStrip();
+  const c=document.getElementById("vidcontrols");
+  if(c)c.innerHTML=L.role==="host"?hostVideoBarHTML():playerVideoBarHTML(L.view||{});
 }
 function addVideo(id,stream,label,muted,wantsAudio){
   const s=ensureStrip();
@@ -2178,7 +2207,7 @@ function playerVideoBarHTML(v){
   if(V.stream)parts.push(`<button class="btn btn-ghost btn-sm" onclick="playerStopVideo()">🎥 turn off my camera</button>`);
   if(hasMic)parts.push(`<button class="btn btn-ghost btn-sm" onclick="toggleSelfMute()">${L.selfMuted?"🔊 unmute me":"🔇 mute me"}</button>`);
   if(!parts.length)return "";
-  return `<div class="center" style="margin:0 0 14px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap">${parts.join("")}</div>`;
+  return parts.join("");
 }
 
 function recallAll(){
@@ -2494,7 +2523,7 @@ function liveQHTML(r,q,v){
   if(r.type==="listReveal")return `<div class="clues">${q.clues.map((c,i)=>i<v.cluesShown?`<div class="clue">${esc(c)}</div>`:`<div class="clue hidden-clue">next clue soon…</div>`).join("")}</div>`;
   if(r.type==="quote")return `<div class="quotecard center">${q.showText?`<p style="font-family:'Fraunces',Georgia,serif;font-style:italic;font-size:19px;margin-bottom:10px">“${esc(q.quote)}”</p>`:`<p class="muted" style="font-size:14px;margin-bottom:12px">🤖 audio-only quote — listen closely</p>`}<button class="btn btn-gold btn-sm" onclick="liveSpeakQuote()">🔊 Play the quote</button></div><div class="prompt" style="font-size:20px;margin-top:14px">${esc(q.ask||"Name the answer")}</div>`;
   if(r.type==="ordering")return `<div class="prompt" style="font-size:21px">${esc(q.prompt)}</div><div class="lolist">${(v.shuffled&&v.shuffled.length?v.shuffled:q.items.map((x,i)=>i)).map((i,pos)=>`<div class="lorow"><span class="lonum">${pos+1}</span><span class="lolabel">${esc(q.items[i].label)}</span></div>`).join("")}</div><p class="muted" style="margin-top:12px;font-size:13px">players drag to reorder on their phones, then ${v.mode==="timed"?"send":"buzz in"} when ready (shown here in starting order)</p>`;
-  if(r.type==="merger")return `<div class="prompt" style="font-size:19px">Two movies share a word — name the <b>merged</b> title</div><div class="mrows">${mergerRowsHTML(q,v.cluesShown||1)}</div>`;
+  if(r.type==="merger")return `<div class="prompt" style="font-size:19px">Two answers share a word — name the <b>merged</b> title</div><div class="mrows">${mergerRowsHTML(q,v.cluesShown||1)}</div>`;
   if(r.type==="riddle")return `<div class="prompt">"${esc(q.prompt)}"</div>`;
   if(r.type==="anagram"){
     const ans=q.display||(q.answers&&q.answers[0])||"";
@@ -2504,8 +2533,8 @@ function liveQHTML(r,q,v){
     }).join(" ");
     return `<div class="scramble">${esc(q.scramble)}</div><div class="mask">${mask}</div><p class="muted center" style="font-size:12.5px;margin-top:6px">the shape of the answer — one dash per letter</p>`;
   }
-  if(r.type==="math")return q.parts.map((p,i)=>`${i>0?`<div class="mathop">${i===1?esc(q.op||"+"):"="}</div>`:""}<div class="mathrow"><div class="clue-t">${esc(p.clue)}</div></div>`).join("")+`<p class="muted" style="margin-top:10px;font-size:13px">name all three movies</p>`;
-  if(r.type==="twins")return `<div class="prompt">${esc(q.prompt)}</div><p class="muted" style="font-size:14px">two movies, same year, same idea — name BOTH</p>`;
+  if(r.type==="math")return q.parts.map((p,i)=>`${i>0?`<div class="mathop">${i===1?esc(q.op||"+"):"="}</div>`:""}<div class="mathrow"><div class="clue-t">${esc(p.clue)}</div></div>`).join("")+`<p class="muted" style="margin-top:10px;font-size:13px">name all three answers</p>`;
+  if(r.type==="twins")return `<div class="prompt">${esc(q.prompt)}</div><p class="muted" style="font-size:14px">two answers, same set, same idea — name BOTH</p>`;
   if(r.type==="pieces"){
     const open=new Set((v.tileOrder||[]).slice(0,v.tiles));
     let tiles="";for(let i=0;i<24;i++)tiles+=`<div class="tile ${open.has(i)?"open":""}"></div>`;
@@ -2654,8 +2683,9 @@ function renderLiveHost(){
       <button class="btn btn-ghost" style="margin-top:8px" onclick="liveLeave();S=null;render()">Done</button></div>`;
   }
   app().innerHTML=`<div class="topbar"><div class="brand">GameShown · Live</div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${hostVideoBarHTML()}<span class="tag">room ${L.code}</span>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">${!L.videoOn?hostVideoBarHTML():""}<span class="tag">room ${L.code}</span>
     <button class="btn btn-ghost btn-sm" onclick="if(confirm('End the live room?')){liveLeave();S=null;render();}">✕ end</button></div></div>`+body;
+  updateVidControls();
   fitAllOrphans(app());
 }
 
@@ -2739,6 +2769,11 @@ function buzz(){
 }
 function renderLivePlayer(){
   if(!L||L.role!=="player")return;
+  if(LOD&&LOD.moved)return; // a drag is actively in progress — rebuilding the DOM now would
+                            // orphan the dragged row mid-gesture (this is why drag-and-drop
+                            // used to glitch whenever another player's action pushed a state
+                            // update mid-drag); the drag's own pointerup handler re-renders
+                            // once it finishes, so it's safe to just skip this cycle
   setWide(false);
   const v=L.view||{};
   const head=`<div class="topbar"><div class="brand">GameShown · Live</div><span class="tag">room ${esc(L.code)}</span></div>`;
@@ -2780,7 +2815,7 @@ function renderLivePlayer(){
         ${v.timeLeft!=null?`<span class="potbadge">⏱ <b id="qtimersec">${v.timeLeft}</b>s</span>`:""}
       </span></div>
       <div class="prompt" style="font-size:19px;text-align:center;margin-top:6px">${esc(q.prompt)}</div>
-      ${listHtml?`<p class="muted center" style="font-size:12.5px;margin-top:4px">drag any movie up or down to put them in order</p>`:""}
+      ${listHtml?`<p class="muted center" style="font-size:12.5px;margin-top:4px">drag any item up or down to put them in order</p>`:""}
       ${listHtml}
       <div class="buzzspacer"></div>
       <div class="buzzdock">${actionArea}</div>`;
@@ -2853,8 +2888,7 @@ function renderLivePlayer(){
   const keep=prev?{v:prev.value,f:document.activeElement===prev}:null;
   const hasMic=V.stream&&V.stream.getAudioTracks&&V.stream.getAudioTracks().length>0;
   const micStatus=hasMic?(L.micLive?(L.selfMuted?`<div class="miclive" style="animation:none;opacity:.55">🔇 you muted yourself</div>`:`<div class="miclive">🎙 your mic is LIVE to the room</div>`):`<div class="miclive" style="animation:none;opacity:.55">🎙 mic ready — waiting for the host to put you on air</div>`):"";
-  const mb=micStatus+playerVideoBarHTML(v);
-  app().innerHTML=head+mb+body;
+  app().innerHTML=head+micStatus+body;
   const ni=document.getElementById("panswer");
   if(ni&&keep){
     ni.value=keep.v;if(keep.f)ni.focus();
@@ -2862,6 +2896,7 @@ function renderLivePlayer(){
     if(b)b.disabled=!ni.value.trim();
   }
   if(v.screen==="question"&&L.game&&L.game.rounds[v.ri]&&L.game.rounds[v.ri].type==="ordering")initLiveOrderDnD();
+  updateVidControls();
   fitAllOrphans(app());
 }
 function liveOrderRowsHTML(q,arr){
