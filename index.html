@@ -634,9 +634,9 @@ function renderHome(){
     <p>ten rounds. zero mercy. any topic.</p>
   </div>
   <div class="menu">
-    <button class="menucard" onclick="startGame(GAME_S1E1)">
+    <button class="menucard" onclick="renderPlaySelect()">
       <div class="ico">🍿</div>
-      <div><h3>Play S1E1</h3><p>The original episode — 9 rounds, 45 questions. Progressive reveals, speed bonuses, fuzzy answers accepted.</p></div>
+      <div><h3>Select a game to play</h3><p>Search and launch any game — the original S1E1 episode, or anything you've built in the admin portal.</p></div>
     </button>
     <button class="menucard" onclick="openCreator()">
       <div class="ico">🎛️</div>
@@ -656,6 +656,51 @@ function renderHome(){
       <span class="tag soon">Phase 2</span>
     </div>
   </div>`;
+}
+let playSearchQ="";
+function playSelectList(){
+  const saved=DB.load().sort((a,b)=>(b._updated||0)-(a._updated||0));
+  const builtin={_id:"__s1e1",title:GAME_S1E1.title,author:GAME_S1E1.author,rounds:GAME_S1E1.rounds,_builtin:true};
+  const all=[builtin,...saved];
+  const q=playSearchQ.trim().toLowerCase();
+  if(!q)return all;
+  return all.filter(g=>(g.title||"").toLowerCase().includes(q)||(g.author||"").toLowerCase().includes(q));
+}
+function renderPlaySelect(skipScroll){
+  if(!skipScroll)window.scrollTo(0,0);
+  const prevInput=document.getElementById("playsearch");
+  const hadFocus=prevInput&&document.activeElement===prevInput;
+  const caret=prevInput?prevInput.selectionStart:null;
+  const list=playSelectList();
+  const tiles=list.map(g=>{
+    const qn=g.rounds.reduce((s,r)=>s+r.questions.length,0);
+    const action=g._builtin?"startGame(GAME_S1E1)":`playSelectStart('${g._id}')`;
+    return `<button class="menucard" onclick="${action}">
+      <div class="ico">${g._builtin?"🍿":"🎮"}</div>
+      <div><h3>${esc(g.title||"untitled")}</h3>
+      <p>${g.rounds.length} round${g.rounds.length===1?"":"s"} · ${qn} question${qn===1?"":"s"}${g.author?" · by "+esc(g.author):""}</p></div>
+    </button>`;
+  }).join("");
+  app().innerHTML=`
+  <div class="topbar"><div class="brand" onclick="S=null;C=null;render()">GameShown</div>
+    <button class="btn btn-ghost btn-sm" onclick="S=null;render()">← Home</button></div>
+  <div class="crhead"><h2 class="display" style="font-size:26px">Select a game to play</h2></div>
+  <div class="card" style="margin-bottom:16px">
+    <input type="text" id="playsearch" placeholder="Search games by title or author…" value="${esc(playSearchQ)}" oninput="playSearchQ=this.value;renderPlaySelect(true)">
+  </div>
+  <div class="menu">
+    ${tiles||`<p class="muted" style="padding:6px 4px">No games match "${esc(playSearchQ)}".</p>`}
+  </div>`;
+  const ni=document.getElementById("playsearch");
+  if(ni&&hadFocus){ni.focus();if(caret!=null)ni.setSelectionRange(caret,caret);}
+}
+function playSelectStart(id){
+  const g=DB.load().find(x=>x._id===id);
+  if(!g)return toast("Couldn't find that game");
+  const c=JSON.parse(JSON.stringify(g));
+  c.rounds=c.rounds.filter(r=>r.questions.length);
+  if(!c.rounds.length)return toast("No questions in this game yet");
+  startGame(c);
 }
 function promptImport(){
   const code=prompt("Paste the game code or JSON:");
@@ -1848,7 +1893,7 @@ function saveQ(ri,qi){
 /* =====================================================
    LIVE ROOMS (beta) — PeerJS host/player
    ===================================================== */
-const FC_BUILD="42";
+const FC_BUILD="43";
 let ACX=null,MASTER=null,SFXVOL=0.8;
 function ac(){if(!ACX){try{ACX=new (window.AudioContext||window.webkitAudioContext)();MASTER=null;}catch(e){}}return ACX;}
 function master(){
