@@ -1,0 +1,19 @@
+{
+  "name": "Buist Knights \u00b7 6th Grade Basketball",
+  "short_name": "Knights",
+  "description": "Animated playbook, roster, schedule, attendance and stats for the Buist Academy Knights.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F8FAFC",
+  "theme_color": "#0E1F38",
+  "icons": [
+    {
+      "src": "logo.png",
+      "sizes": "553x553",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}
